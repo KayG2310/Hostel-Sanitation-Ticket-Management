@@ -7,7 +7,11 @@ import authRoutes from "./routes/auth.js";
 dotenv.config();
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 app.use(express.json());
 
 // Connect MongoDB

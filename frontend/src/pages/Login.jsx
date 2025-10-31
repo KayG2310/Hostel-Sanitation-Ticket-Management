@@ -1,9 +1,11 @@
 // src/pages/Login.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import LeavesBackground from "../components/LeavesBackground";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
@@ -21,10 +23,24 @@ export default function Login() {
         role,
       });
 
-      await Promise.all([apiCall, new Promise((r) => setTimeout(r, 700))]);
+      const res = await Promise.all([apiCall, new Promise((r) => setTimeout(r, 700))]);
+      const { data } = await apiCall;
 
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.user.role);
+
+      // ✅ After successful login
       alert("✅ Login successful!");
-      // TODO: redirect or set auth state
+
+      // token-based role routing
+      if (data.user.role === "student") {
+        navigate("/dashboard-student", { state: { token: data.token } });
+      } else if (data.user.role === "caretaker") {
+        navigate("/dashboard-caretaker", { state: { token: data.token } });
+      } else {
+        navigate("/dashboard-warden", { state: { token: data.token } });
+      }
+
     } catch (err) {
       alert("❌ Login failed: " + (err.response?.data?.message || err.message));
     } finally {

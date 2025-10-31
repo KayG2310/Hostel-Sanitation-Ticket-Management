@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
-// import SignupStudent from "./pages/SignupStudent";
+import SignupStudent from "./pages/SignupStudent";
+import DashboardStudent from "./pages/DashboardStudent";
+import ProtectedRoute from "./components/ProtectedRoute"; // 👈 import this
 // import SignupCaretaker from "./pages/SignupCaretaker";
 // import SignupWarden from "./pages/SignupWarden";
 
@@ -9,7 +11,15 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        {/* <Route path="/signup/student" element={<SignupStudent />} /> */}
+        <Route path="/signup/student" element={<SignupStudent />} />
+        <Route
+          path="/dashboard-student"
+          element={
+            <ProtectedRoute>
+              <DashboardStudent />
+            </ProtectedRoute>
+          }
+        />
         {/* <Route path="/signup/caretaker" element={<SignupCaretaker />} /> */}
         {/* <Route path="/signup/warden" element={<SignupWarden />} /> */}
       </Routes>
