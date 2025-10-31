@@ -5,3 +5,40 @@
 body {
   @apply bg-gradient-to-br from-green-50 to-blue-50 min-h-screen flex items-center justify-center;
 }
+/* ===== leaf animations ===== */
+@keyframes floatLeftRight {
+  0% { transform: translate3d(0, 0, 0) rotate(-6deg); opacity: 0.95; }
+  25% { transform: translate3d(-20px, 8vh, 0) rotate(6deg); opacity: 0.9; }
+  50% { transform: translate3d(10vw, 14vh, 0) rotate(2deg); opacity: 0.95; }
+  75% { transform: translate3d(-12vw, 22vh, 0) rotate(-8deg); opacity: 0.9; }
+  100% { transform: translate3d(0, 0, 0) rotate(-6deg); opacity: 0.95; }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(30vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  50% { transform: translateY(-10vh) rotate(15deg); opacity: 0.95; }
+  100% { transform: translateY(-40vh) rotate(30deg); opacity: 0; }
+}
+
+/* different leaf classes with different durations/delays */
+.leaf-a { animation: floatLeftRight 14s ease-in-out infinite; }
+.leaf-b { animation: floatLeftRight 22s ease-in-out infinite; transform-origin: center; opacity: 0.95; }
+.leaf-c { animation: floatUp 18s linear infinite; }
+.leaf-d { animation: floatLeftRight 28s cubic-bezier(.2,.8,.2,1) infinite; }
+.leaf-e { animation: floatUp 20s ease-in-out infinite; }
+.leaf-f { animation: floatLeftRight 16s ease-in-out infinite; }
+
+/* slightly vary opacity & scale so leaves feel organic */
+.leaf-a, .leaf-b, .leaf-c, .leaf-d, .leaf-e, .leaf-f {
+  will-change: transform, opacity;
+}
+
+/* small helper: scale when logging in (applied in component via class) */
+.scale-98 { transform: scale(.98); }
+
+/* optional: smoother blur (tailwind's blur-sm is fine but we included a fallback) */
+.blur-sm\/10 { filter: blur(4px); }
+
+/* spinner animate (we use animate-spin from tailwind for svg path) */
+/* ripple/overlay handled in JSX via a pulsing span */
