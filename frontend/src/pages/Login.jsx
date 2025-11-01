@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import LeavesBackground from "../components/LeavesBackground";
+import SwirlTransition from "../components/SwirlTransition";
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSwirling, setIsSwirling] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,11 +26,20 @@ export default function Login() {
         role,
       });
 
-      const res = await Promise.all([apiCall, new Promise((r) => setTimeout(r, 700))]);
-      const { data } = await apiCall;
+      //const res = await Promise.all([apiCall, new Promise((r) => setTimeout(r, 700))]);
+      //const { data } = await apiCall;
+      const [res] = await Promise.all([apiCall, new Promise((r) => setTimeout(r, 700))]);
+
+      const { data } = res;
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user.role);
+
+      //Triigger Swirl animation
+      //Wait for swirl to mostly finish before navigating.
+      //If you want to match the CSS animation precisely, set this to the animation duration below (~1300ms).
+      setIsSwirling(true);
+      await new Promise((r) => setTimeout(r, 1300));
 
       // ✅ After successful login
       alert("✅ Login successful!");
@@ -43,14 +55,19 @@ export default function Login() {
 
     } catch (err) {
       alert("❌ Login failed: " + (err.response?.data?.message || err.message));
-    } finally {
+
+      // ✅ Reset both since the swirl might have partially triggered before failure
       setIsLoggingIn(false);
-    }
+      setIsSwirling(false);
+    } //finally {
+      //setIsLoggingIn(false);
+    //}
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative">
+    <div className="min-h-screen flex items-center justify-center relative">
       <LeavesBackground />
+      <SwirlTransition active={isSwirling} />
 
       {/* subtle glass panel wrapper */}
       <div
@@ -104,6 +121,8 @@ export default function Login() {
               className={`relative overflow-hidden w-full p-3 rounded-lg font-semibold text-white transition-transform
                 ${isLoggingIn ? "bg-green-800 scale-95" : "bg-green-600 hover:bg-green-700 active:scale-95"}`}
               aria-busy={isLoggingIn}
+              /*  added this  */
+              disabled={isLoggingIn}
             >
               {/* ripple / spinner */}
               <span className={`inline-block ${isLoggingIn ? "opacity-0" : "opacity-100"} transition-opacity`}>
