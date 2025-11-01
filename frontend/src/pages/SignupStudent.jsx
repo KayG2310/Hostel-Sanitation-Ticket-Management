@@ -61,7 +61,7 @@ export default function SignupStudent() {
               <input
                 type="email"
                 name="email"
-                placeholder="Institute Email (must end with @iitrpr.ac.in)"
+                placeholder="Email (must end with @iitrpr.ac.in)"
                 value={formData.email}
                 onChange={handleChange}
                 required

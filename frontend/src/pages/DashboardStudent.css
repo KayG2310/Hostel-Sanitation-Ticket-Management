@@ -1,0 +1,67 @@
+.dashboard-container {
+  padding: 2rem;
+  color: #333;
+  font-family: "Poppins", sans-serif;
+}
+
+.funky-font {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #4b9cd3;
+  text-shadow: 1px 1px 2px #aaa;
+}
+
+.room-info, .janitor-info, .rating-section {
+  background: #f9f9f9;
+  margin: 1rem 0;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn {
+  background-color: #4b9cd3;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn:hover {
+  background-color: #3a8bb7;
+}
+.ticket-section {
+  margin-top: 2rem;
+  background: #f4faff;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.ticket-form {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket-form input,
+.ticket-form textarea {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.tickets-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.tickets-list li {
+  background: #fff;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
