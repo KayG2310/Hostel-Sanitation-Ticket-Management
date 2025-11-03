@@ -155,5 +155,186 @@ body {
 }
 .swirl-overlay-tint.visible { opacity: 1; }
 
+/* --- Design tokens & background for CleanTrack dashboard --- */
 
+/* Primary font: Inter (fallbacks). If you prefer Poppins change to Poppins. */
+:root {
+  --primary-green: #2f855a;   /* darker green */
+  --primary-green-600: #2f855a;
+  --accent-blue: #4b9cd3;
+  --muted-foreground: #6b7280; /* slate-500-ish */
+  --bg-gradient-start: #f6fbff;
+  --bg-gradient-mid: #eef8fb;
+  --bg-gradient-end: #f9ffff;
+  --card-bg: #ffffff;
+  --card-border: rgba(15,23,42,0.06);
+  --page-padding: 1.25rem;
+  --font-sans: Inter, "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+
+/* body / page background */
+body {
+  @apply antialiased;
+  font-family: var(--font-sans);
+  color: rgb(20 20 20 / 0.95);
+  background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-mid) 45%, var(--bg-gradient-end) 100%);
+  /* very subtle diagonal sheen */
+  background-image: linear-gradient(140deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.02) 100%), linear-gradient(180deg, var(--bg-gradient-start), var(--bg-gradient-end));
+}
+
+/* Page container helpers (used by our pages) */
+.page-shell {
+  padding: var(--page-padding);
+}
+
+/* Headings and text utilities matching the sample design */
+.page-title {
+  color: var(--primary-green-600, #2f855a); /* fallback */
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+  color: var(--muted-foreground, #6b7280);
+  margin-top: 0.25rem;
+}
+
+/* Card overrides — ensure cards are solid white and readable */
+.card-solid {
+  background: #ffffff; /* solid white */
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 1rem; /* 16px */
+  box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+  padding: 1rem; /* fallback if needed */
+}
+
+/* Small info tiles inside the big card */
+.info-tile {
+  background: #ffffff;
+  border: 1px solid rgba(15,23,42,0.05);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  box-shadow: 0 4px 10px rgba(2,6,23,0.04);
+}
+
+.card-solid,
+.info-tile {
+  z-index: 10;
+  position: relative;
+}
+
+.bg-white\/95, .backdrop-blur-md {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* ensure headings stand out above animated background */
+.heading-shell {
+  display: inline-block;              /* keeps width tight around text */
+  background: rgba(255,255,255,0.92); /* nearly solid white but slight warmth */
+  padding: 0.35rem 0.75rem;           /* breathing room around text */
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+  position: relative;
+  z-index: 30;                        /* above waves & cards */
+  backdrop-filter: none;              /* ensure no blur behind */
+}
+
+/* same for subtitle if you want a separate smaller pill look */
+.subtitle-shell {
+  display: inline-block;
+  background: rgba(255,255,255,0.88);
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.4rem;
+  margin-top: 0.5rem;
+  z-index: 30;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+}
+
+/* Button color helpers (if you used Button primitive variants these are consistent) */
+.btn-primary {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+.btn-accent {
+  background: var(--accent-blue);
+  color: white;
+}
+.muted-text { color: var(--muted-foreground); }
+
+/* Responsive tweaks for dashboard containers */
+@media (min-width: 768px) {
+  .page-title { font-size: 2.125rem; } /* md larger */
+}
+
+/* 🌊 Dynamic background and wave animation */
+body {
+  margin: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Poppins", Inter, sans-serif;
+  overflow: auto;
+  background: linear-gradient(
+    315deg,
+    rgba(0, 191, 165, 1) 3%,      
+    rgba(72, 202, 228, 1) 38%,    
+    rgba(144, 224, 239, 1) 68%,   
+    rgba(173, 232, 244, 1) 98%    
+  );
+  animation: gradient 15s ease infinite;
+  background-size: 400% 400%;
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: #0b2e2a;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.wave {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1000% 1000% 0 0;
+  position: fixed;
+  width: 200%;
+  height: 12em;
+  animation: wave 10s -3s linear infinite;
+  transform: translate3d(0, 0, 0);
+  opacity: 0.9;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.wave:nth-of-type(2) {
+  bottom: -1.25em;
+  animation: wave 18s linear reverse infinite;
+  opacity: 0.7;
+}
+
+.wave:nth-of-type(3) {
+  bottom: -2.5em;
+  animation: wave 20s -1s reverse infinite;
+  opacity: 0.8;
+}
+
+@keyframes wave {
+  2% { transform: translateX(1); }
+  25% { transform: translateX(-25%); }
+  50% { transform: translateX(-50%); }
+  75% { transform: translateX(-25%); }
+  100% { transform: translateX(1); }
+}
+
+/* style for small dialog close button */
+.dialog-close-btn {
+  border-radius: 6px;
+  padding: 0.25rem;
+}
+.dialog-close-btn:hover {
+  background: rgba(15,23,42,0.04);
+}
 
