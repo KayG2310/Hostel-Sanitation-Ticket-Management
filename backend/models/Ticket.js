@@ -6,9 +6,11 @@ const ticketSchema = new mongoose.Schema({
   studentEmail: { type: String, required: true },
   roomNumber: { type: String, required: true },
   title: { type: String, required: true },
-  description: { type: String },
+  description: { type: String, required: true },
   status: { type: String, enum: ["open", "in-progress", "resolved"], default: "open" },
   createdAt: { type: Date, default: Date.now },
+  photoUrl: { type: String, default: null },        // public URL or server path
+  aiConfidence: { type: Number, default: null },    // e.g. 0-100
 });
 
 export default mongoose.model("Ticket", ticketSchema);
