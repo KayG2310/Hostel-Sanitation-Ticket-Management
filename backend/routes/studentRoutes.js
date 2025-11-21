@@ -26,7 +26,7 @@ router.get("/dashboard-student", verifyToken, async (req, res) => {
     const floor = user.roomNumber ? user.roomNumber[0] : "1";
 
     // ✅ Fetch actual room from database
-    let room = await Room.findOne({ roomNumber: user.roomNumber });
+    let room = await Room.findOne({ roomNumber: user.roomNumber }).populate("caretaker", "name email role");
     
     // If room doesn't exist, create it with default values
     if (!room) {

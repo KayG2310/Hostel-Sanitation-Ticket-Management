@@ -49,9 +49,7 @@ export default function Login() {
         navigate("/dashboard-student", { state: { token: data.token } });
       } else if (data.user.role === "caretaker") {
         navigate("/dashboard-caretaker", { state: { token: data.token } });
-      } else {
-        navigate("/dashboard-warden", { state: { token: data.token } });
-      }
+      } 
 
     } catch (err) {
       alert("❌ Login failed: " + (err.response?.data?.message || err.message));
@@ -111,7 +109,6 @@ export default function Login() {
                 >
                   <option value="student">Student</option>
                   <option value="caretaker">Caretaker</option>
-                  <option value="warden">Warden</option>
                 </select>
               </label>
             </div>
@@ -145,9 +142,10 @@ export default function Login() {
 
           <p className="text-sm text-center mt-4 text-gray-500">
             Don’t have an account?{" "}
-            <a href="/signup/student" className="text-green-600 font-semibold">
-              Sign up
-            </a>
+            {/* Don’t have an account?{" "} */}
+            <a href="/signup/student" className="text-green-600 font-semibold">Student</a> |
+            <a href="/signup/caretaker" className="text-green-600 font-semibold ml-1">Caretaker</a> 
+            
           </p>
         </div>
       </div>

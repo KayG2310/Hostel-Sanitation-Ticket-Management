@@ -1,10 +1,9 @@
-
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { sendEmail } from "../utils/sendMail.js";
-
+import Room from "../models/Room.js";
 const router = express.Router();
 import { verifyToken } from "../middleware/authMiddleware.js";
 
@@ -13,6 +12,9 @@ router.get("/verify", verifyToken, (req, res) => {
 });
 
 // -------------------- STUDENT SIGNUP --------------------
+// -------------------- CARETAKER SIGNUP --------------------
+
+
 router.post("/signup/student", async (req, res) => {
   try {
     const { name, email, password, roomNumber} = req.body;
@@ -86,6 +88,84 @@ router.post("/verify/student", async (req, res) => {
     res.status(500).json({ message: "Server error during verification" });
   }
 });
+// -------------------- CARETAKER VERIFY --------------------
+// TEMP storage for caretaker signup (clears on server restart)
+let pendingCaretakers = {};
+
+// -------------------- CARETAKER SIGNUP --------------------
+router.post("/signup/caretaker", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+
+    if (!email.endsWith("@iitrpr.ac.in")) {
+      return res.status(400).json({ message: "Email must end with @iitrpr.ac.in" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (!existingUser.isVerified) await User.deleteOne({ email });
+      else return res.status(400).json({ message: "User already exists" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const newUser = new User({
+      name,
+      email,
+      password: hashed,
+      role: "caretaker",
+      verificationCode: code,
+      isVerified: false,
+    });
+    await newUser.save();
+    
+    // send OTP to ADMIN EMAIL
+    await sendEmail(
+      ADMIN_EMAIL,
+      "Caretaker Signup Verification",
+      `Caretaker ${name} requested signup.\nOTP: ${code}\nEmail: ${email}`
+    );
+    
+    res.status(200).json({
+      message: "OTP sent to Admin Email. Contact admin to get your verification code.",
+    });
+    // await newUser.save();
+
+    // console.log(`🔐 Caretaker signup OTP for ${email}: ${code} (sent to ADMIN)`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error during caretaker signup" });
+  }
+});
+
+// -------------------- CARETAKER VERIFY --------------------
+router.post("/verify/caretaker", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const user = await User.findOne({ email, role: "caretaker" });
+    if (!user) return res.status(400).json({ message: "Caretaker not found" });
+
+    if (user.verificationCode !== code)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    user.isVerified = true;
+    user.verificationCode = null;
+    await user.save();
+    await Room.updateMany(
+      {}, // assign to all rooms OR filter by floors
+      { caretaker: user.name }
+    );
+    res.json({ message: "Caretaker verified successfully!" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error verifying caretaker" });
+  }
+});
+
 
 // -------------------- LOGIN --------------------
 router.post("/login", async (req, res) => {
@@ -132,6 +212,28 @@ router.get("/me", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Error fetching user info:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.verificationCode !== code)
+      return res.status(400).json({ message: "Invalid OTP" });
+
+    user.isVerified = true;
+    user.verificationCode = null;
+    await user.save();
+
+    return res.status(200).json({ message: "User verified successfully" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error during OTP verification" });
   }
 });
 

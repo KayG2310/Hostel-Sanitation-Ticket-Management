@@ -3,8 +3,7 @@ import Login from "./pages/Login";
 import SignupStudent from "./pages/SignupStudent";
 import DashboardStudent from "./pages/DashboardStudent";
 import ProtectedRoute from "./components/ProtectedRoute"; // 👈 import this
-// import SignupCaretaker from "./pages/SignupCaretaker";
-// import SignupWarden from "./pages/SignupWarden";
+import SignupCaretaker from "./pages/SignupCaretaker";
 
 function App() {
   return (
@@ -12,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup/student" element={<SignupStudent />} />
+        <Route path="/signup/caretaker" element={<SignupCaretaker />} />
         <Route
           path="/dashboard-student"
           element={
@@ -20,8 +20,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* <Route path="/signup/caretaker" element={<SignupCaretaker />} /> */}
-        {/* <Route path="/signup/warden" element={<SignupWarden />} /> */}
       </Routes>
     </Router>
   );
