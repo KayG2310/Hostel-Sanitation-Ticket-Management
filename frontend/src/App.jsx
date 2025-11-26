@@ -4,6 +4,7 @@ import SignupStudent from "./pages/SignupStudent";
 import DashboardStudent from "./pages/DashboardStudent";
 import ProtectedRoute from "./components/ProtectedRoute"; // 👈 import this
 import SignupCaretaker from "./pages/SignupCaretaker";
+import DashboardCaretaker from "./pages/DashboardCaretaker";
 
 function App() {
   return (
@@ -17,6 +18,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardStudent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path = "/dashboard-caretaker"
+          element = {
+            <ProtectedRoute>
+                <DashboardCaretaker/>
             </ProtectedRoute>
           }
         />
