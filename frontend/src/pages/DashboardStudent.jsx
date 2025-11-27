@@ -110,15 +110,30 @@ export default function DashboardStudent() {
     <div className="min-h-screen">
       <div className="w-full min-h-screen">
         {/* ========= FULL WIDTH HEADER ========= */}
-        <div className="w-full bg-white shadow-md z-40">
-          <div className="w-full py-6 px-4 sm:px-10 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-green-700">
-                Student Dashboard
-              </h1>
-              <p className="mt-1 text-sm md:text-base text-slate-600">
-                Manage your room cleanliness and sanitation — overview, tickets and reporting
-              </p>
+        <div className="w-full bg-white border-b border-gray-100 shadow-sm z-40 relative">
+          {/* Subtle background texture with green/emerald tones */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/40 via-white to-green-50/30"></div>
+          
+          {/* Refined accent line at top - green/emerald gradient */}
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-500"></div>
+          
+          <div className="relative w-full py-6 px-6 sm:px-10 lg:px-14 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Elegant icon container - green/emerald theme */}
+              <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
+                  Student Dashboard
+                </h1>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500 font-normal">
+                  Manage your room cleanliness and sanitation — overview, tickets and reporting
+                </p>
+              </div>
             </div>
 
             <button
@@ -127,13 +142,16 @@ export default function DashboardStudent() {
                 sessionStorage.clear();
                 window.location.href = "/";
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
+              className="group relative px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2 overflow-hidden"
             >
-              Logout
+              {/* Button shine effect */}
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span className="hidden sm:inline relative z-10">Logout</span>
             </button>
           </div>
-
-          <div className="border-t border-gray-200"></div>
         </div>
 
 
@@ -202,9 +220,12 @@ export default function DashboardStudent() {
         <div className="mt-12 flex justify-center">
           <div className="relative w-full max-w-6xl pb-20">
             <div className="overflow-hidden">
-              <h2 className="text-2xl font-semibold text-white-700 mb-6">
-                Your Tickets
-              </h2>
+              <div className="mb-8">
+                <h2 className="text-3xl font-extrabold text-green-800 mb-2">
+                  Your Tickets
+                </h2>
+                <div className="h-1 w-24 bg-green-600 rounded-full"></div>
+              </div>
 
               <div
                 className="flex transition-transform duration-500"

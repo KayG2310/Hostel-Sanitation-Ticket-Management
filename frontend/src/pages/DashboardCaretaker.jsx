@@ -82,15 +82,30 @@ export default function DashboardCaretaker() {
   return (
       <div className="w-full min-h-screen">
       {/* ========= FULL-WIDTH HEADER (SEPARATE, LIKE STUDENT) ========= */}
-      <div className="w-full bg-white shadow-md z=40">
-        <div className="w-full py-6 px-4 sm:px-10 lt:px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-green-700">
-              Caretaker Dashboard
-            </h1>
-            <p className="mt-1 text-sm md:text-base text-slate-600">
-              Manage sanitation tickets for your assigned areas
-            </p>
+      <div className="w-full bg-white border-b border-gray-100 shadow-sm z-40 relative">
+        {/* Subtle background texture */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 via-white to-blue-50/30"></div>
+        
+        {/* Refined accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+        
+        <div className="relative w-full py-6 px-6 sm:px-10 lg:px-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Elegant icon container */}
+            <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
+                Caretaker Dashboard
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-gray-500 font-normal">
+                Manage sanitation tickets for your assigned areas
+              </p>
+            </div>
           </div>
 
           <button
@@ -98,24 +113,26 @@ export default function DashboardCaretaker() {
               localStorage.clear();
               window.location.href = "/";
             }}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
+            className="group relative px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2 overflow-hidden"
           >
-            Logout
+            {/* Button shine effect */}
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+            <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="hidden sm:inline relative z-10">Logout</span>
           </button>
         </div>
 
-        {/* Grey divider line */}
-        <div className="border-t border-gray-200 mt-0.3"></div>
-
         {/* Tabs row aligned with title */}
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-5 pt-3 pb-2">
+        <div className="relative w-full px-6 sm:px-10 lg:px-14 border-t border-gray-100">
+          <div className="flex gap-2 pt-3 pb-3">
             <button
               onClick={() => setActiveTab("open")}
-              className={`px-4 py-2 rounded-md font-medium ${
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                 activeTab === "open"
-                  ? "bg-green-100 text-green-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-200"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               Open Tickets
@@ -123,10 +140,10 @@ export default function DashboardCaretaker() {
 
             <button
               onClick={() => setActiveTab("inProcess")}
-              className={`px-4 py-2 rounded-md font-medium ${
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                 activeTab === "inProcess"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-amber-50 text-amber-700 shadow-sm border border-amber-200"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               In-Process
@@ -134,10 +151,10 @@ export default function DashboardCaretaker() {
 
             <button
               onClick={() => setActiveTab("resolved")}
-              className={`px-4 py-2 rounded-md font-medium ${
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                 activeTab === "resolved"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               Resolved

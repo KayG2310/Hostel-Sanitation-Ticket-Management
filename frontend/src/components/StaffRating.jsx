@@ -53,6 +53,16 @@ export default function StaffRating() {
       );
       alert("Ratings submitted successfully!");
       setRatings({});
+      
+      // Refetch average ratings to update the display
+      try {
+        const ratingRes = await axios.get("http://localhost:3000/api/student/staff-ratings", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAvgRatings(ratingRes.data || {});
+      } catch (fetchErr) {
+        console.error("Error fetching updated ratings:", fetchErr);
+      }
     } catch (err) {
       console.error("Error submitting ratings:", err);
       alert("Failed to submit ratings.");
