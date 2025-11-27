@@ -16,7 +16,10 @@ export default function DashboardStudent() {
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
-  
+  const [slideIndex, setSlideIndex] = useState(0);
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [tickets]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,11 +108,10 @@ export default function DashboardStudent() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto page-shell space-y-6">
-        {/* 🧭 Top Header Band */}
+      <div className="w-full min-h-screen">
+        {/* ========= FULL WIDTH HEADER ========= */}
         <div className="w-full bg-white shadow-md z-40">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-            {/* Left side: Title + Subtitle */}
+          <div className="w-full py-6 px-4 sm:px-10 flex items-center justify-between">
             <div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-green-700">
                 Student Dashboard
@@ -119,96 +121,139 @@ export default function DashboardStudent() {
               </p>
             </div>
 
-            {/* Right side: Logout Button */}
             <button
               onClick={() => {
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = "/"; // or use navigate("/login") if you have React Router
+                window.location.href = "/";
               }}
               className="text-sm text-gray-500 hover:text-gray-700 transition font-medium"
             >
               Logout
             </button>
           </div>
+
+          <div className="border-t border-gray-200"></div>
         </div>
 
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 card-solid">
-            <CardHeader className="flex items-center justify-between pb-4">
-              <CardTitle>Room Information</CardTitle>
-            </CardHeader>
 
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-card rounded-lg border">
-                  <div className="text-primary text-2xl">📍</div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Your Room</p>
-                    <p className="font-semibold">{userData.roomNumber || "N/A"}</p>
-                  </div>
-                </div>
+        <div className="flex justify-center mt-8">
+          <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                <div className="flex items-center gap-3 p-4 bg-card rounded-lg border">
-                  <div className="text-primary text-2xl">👤</div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Assigned Caretaker</p>
-                    <p className="font-semibold">{userData.caretaker || "Unassigned"}</p>
-                  </div>
-                </div>
+            {/* GLASS ROOM INFO */}
+            <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
 
-                <div className="flex items-center gap-3 p-4 bg-card rounded-lg border">
-                  <div className="text-primary text-2xl">📅</div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Cleaned</p>
-                    <p className="font-semibold">{userData.lastCleaned ? new Date(userData.lastCleaned).toLocaleString() : "Not yet cleaned"}</p>
-                  </div>
-                </div>
+                <h2 className="text-2xl font-semibold text-green-800 mb-6">
+                  Room Information
+                </h2>
 
-                <div className="flex items-center gap-3 p-4 bg-card rounded-lg border">
-                  <div className="h-10 w-10 rounded-full bg-status-resolved flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">—</span>
+                <div className="flex flex-col justify-between min-h-[260px]">
+
+                  <div className="grid grid-cols-2 gap-10 text-base">
+                    <div>
+                      <p className="text-sm text-gray-500">Room</p>
+                      <p className="font-semibold text-lg">{userData.roomNumber}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500">Caretaker</p>
+                      <p className="font-semibold text-lg">{userData.caretaker}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-500">Last Cleaned</p>
+                      <p className="font-semibold text-lg">
+                        {userData.lastCleaned
+                          ? new Date(userData.lastCleaned).toLocaleString()
+                          : "Not yet cleaned"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Compliance Score</p>
-                    <p className="font-semibold">—</p>
-                  </div>
+
+                  <Button
+                    className="w-full mt-8"
+                    onClick={() => setShowSubmitForm(true)}
+                  >
+                    ➕ Report Issue
+                  </Button>
                 </div>
               </div>
+            </div>
 
-              <div className="pt-4">
-                <Button className="w-full" onClick={() => setShowSubmitForm(true)} variant="primary" >
-                  ➕ Report Issue
-                </Button>
+            {/* GLASS CLEANING STATUS */}
+            <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+                <CleaningStatusMarker
+                  roomNumber={userData.roomNumber}
+                  lastCleaned={userData.lastCleaned}
+                  caretaker={userData.caretaker}
+                  onMarkClean={handleMarkClean}
+                />
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <CleaningStatusMarker
-            className="card-solid"
-            roomNumber={userData.roomNumber}
-            lastCleaned={userData.lastCleaned}
-            caretaker={userData.caretaker}
-            onMarkClean={handleMarkClean}
-          />
-        </div>
-
-        <div>
-          <div className="heading-shell inline-block mb-4">
-            <h2 className="text-2xl font-semibold m-0">Your Tickets</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {tickets.length === 0 ? (
-              <p>No tickets raised yet.</p>
-            ) : (
-              tickets.map(t => <TicketCard key={t._id || t.id} ticket={t} />)
-            )}
           </div>
         </div>
-        <StaffRating />
 
+
+        <div className="mt-12 flex justify-center">
+          <div className="relative w-full max-w-6xl overflow-hidden">
+
+            <h2 className="text-2xl font-semibold text-white-700 mb-6">
+              Your Tickets
+            </h2>
+
+            {/* LEFT ARROW */}
+            <button
+              onClick={() => setSlideIndex(prev => Math.max(prev - 1, 0))}
+              className="absolute left-1/2 top-[80%] -translate-x-[130%] -translate-y-1/2 z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
+            >
+              ◀
+            </button>
+
+            {/* RIGHT ARROW */}
+            <button
+              onClick={() => setSlideIndex(prev => prev + 1)}
+              className="absolute left-1/2 top-[80%] translate-x-[30%] -translate-y-1/2 z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
+            >
+              ▶
+            </button>
+
+            <div
+              className="flex transition-transform duration-500"
+              style={{ transform: `translateX(-${slideIndex * 50}%)` }}
+            >
+              {tickets.length === 0 ? (
+                <div className="w-full text-center text-gray-600 py-20">
+                  No tickets raised yet.
+                </div>
+              ) : (
+                tickets.map(t => (
+                  <div key={t._id || t.id} className="w-1/2 px-6 shrink-0">
+                    <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
+                      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+                        <TicketCard ticket={t} />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center mt-20 pb-10">
+          <div className="w-full max-w-7xl">
+            <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+                <StaffRating />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Dialog open={showSubmitForm} onOpenChange={setShowSubmitForm}>

@@ -2,9 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+
 body {
   @apply bg-gradient-to-br from-green-50 to-blue-50 min-h-screen flex items-center justify-center;
 }
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
 /* ===== leaf animations ===== */
 @keyframes floatLeftRight {
   0% { transform: translate3d(0, 0, 0) rotate(-6deg); opacity: 0.95; }
@@ -234,7 +243,8 @@ body {
 }
 /* ensure headings stand out above animated background */
 .heading-shell {
-  display: inline-block;              /* keeps width tight around text */
+  display: block;              /* keeps width tight around text */
+  width: 100%;
   background: rgba(255,255,255,0.92); /* nearly solid white but slight warmth */
   padding: 0.35rem 0.75rem;           /* breathing room around text */
   border-radius: 0.5rem;
@@ -246,7 +256,8 @@ body {
 
 /* same for subtitle if you want a separate smaller pill look */
 .subtitle-shell {
-  display: inline-block;
+  display: block;
+  width: 100%;
   background: rgba(255,255,255,0.88);
   padding: 0.25rem 0.6rem;
   border-radius: 0.4rem;
@@ -272,7 +283,6 @@ body {
 
 /* 🌊 Dynamic background and wave animation */
 body {
-  margin: auto;
   font-family: -apple-system, BlinkMacSystemFont, "Poppins", Inter, sans-serif;
   overflow: auto;
   background: linear-gradient(
@@ -336,4 +346,10 @@ body {
 }
 .dialog-close-btn:hover {
   background: rgba(15,23,42,0.04);
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

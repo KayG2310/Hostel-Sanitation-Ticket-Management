@@ -21,7 +21,7 @@ export default function TicketCard({ ticket, onClick }) {
 
   return (
     <Card
-      className={`hover-elevate cursor-pointer relative overflow-hidden border-l-4 ${
+      className={`w-full hover-elevate cursor-pointer relative overflow-hidden border-l-4 ${
         ticket.status === "pending" ? "border-l-status-pending" :
         ticket.status === "in-progress" ? "border-l-status-in-progress" :
         "border-l-status-resolved"
@@ -54,7 +54,7 @@ export default function TicketCard({ ticket, onClick }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <p className="text-sm text-foreground">{ticket.description}</p>
+        <p className="text-sm text-foreground line-clamp-2">{ticket.description}</p>
 
         {ticket.photoUrl && (
           <img
