@@ -23,7 +23,7 @@ export default function SignupCaretaker() {
 
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/signup/caretaker",
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/signup/caretaker`,
         formData
       );
 
@@ -43,7 +43,7 @@ export default function SignupCaretaker() {
 
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/verify/caretaker",
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/verify/caretaker`,
         {
           email: formData.email,
           code,

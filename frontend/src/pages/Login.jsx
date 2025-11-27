@@ -20,7 +20,7 @@ export default function Login() {
 
     try {
       // show animation for at least 700ms for nicer UX
-      const apiCall = axios.post("http://localhost:3000/api/auth/login", {
+      const apiCall = axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/login`, {
         email,
         password,
         role,

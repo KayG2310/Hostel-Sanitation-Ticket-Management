@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Ticket from "../models/Ticket.js";
 import Room from "../models/Room.js";
 import Rating from "../models/Rating.js";
+import Announcement from "../models/Announcement.js";
 
 const router = express.Router();
 
@@ -26,19 +27,34 @@ router.get("/dashboard-student", verifyToken, async (req, res) => {
     const floor = user.roomNumber ? user.roomNumber[0] : "1";
 
     // ✅ Fetch actual room from database
-    let room = await Room.findOne({ roomNumber: user.roomNumber }).populate("caretaker", "name email role");
+    let room = await Room.findOne({ roomNumber: user.roomNumber });
+    
+    // ✅ Always fetch the actual caretaker user from database
+    const caretakerUser = await User.findOne({ role: "caretaker", isVerified: true });
+    let caretakerName = "Unassigned";
+    
+    if (caretakerUser) {
+      caretakerName = caretakerUser.name;
+    }
     
     // If room doesn't exist, create it with default values
     if (!room) {
       const floorNum = parseInt(floor) || 1;
+      
       room = new Room({
         roomNumber: user.roomNumber || "N/A",
         floor: floorNum,
         lastCleaned: null, // No cleaning date yet
-        caretaker: null,
+        caretaker: caretakerName !== "Unassigned" ? caretakerName : null,
         janitors: floorJanitors[floorNum] || floorJanitors[1],
       });
       await room.save();
+    } else {
+      // Update room with current caretaker if it exists
+      if (caretakerName !== "Unassigned" && !room.caretaker) {
+        room.caretaker = caretakerName;
+        await room.save();
+      }
     }
 
     // ✅ Fetch actual tickets from database
@@ -61,7 +77,7 @@ router.get("/dashboard-student", verifyToken, async (req, res) => {
       room: {
         roomNumber: room.roomNumber,
         lastCleaned: room.lastCleaned, // ✅ Use actual database value
-        caretaker: room.caretaker,
+        caretaker: caretakerName, // ✅ Always return the actual caretaker from database
         janitors: room.janitors,
       },
       tickets,
@@ -160,6 +176,42 @@ router.get("/staff-ratings", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Error fetching average ratings:", err);
     res.status(500).json({ message: "Server error while fetching ratings." });
+  }
+});
+
+// GET /api/student/announcements
+router.get("/announcements", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Calculate date 7 days ago
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Fetch announcements from last 7 days
+    const announcements = await Announcement.find({
+      createdAt: { $gte: sevenDaysAgo },
+      $or: [
+        { targetAudience: "all" },
+        { targetAudience: "students" }
+      ]
+    })
+      .populate("postedBy", "name email")
+      .limit(20);
+
+    // Sort by priority: high > medium > low, then by date
+    const priorityOrder = { high: 3, medium: 2, low: 1 };
+    announcements.sort((a, b) => {
+      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    res.json({ announcements });
+  } catch (err) {
+    console.error("Error fetching announcements:", err);
+    res.status(500).json({ message: "Server error while fetching announcements." });
   }
 });
 

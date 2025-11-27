@@ -22,7 +22,7 @@ export default function SignupStudent() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await axios.post("http://localhost:3000/api/auth/signup/student", formData);
+      const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/signup/student`, formData);
       alert(res.data.message);
       setStep(2);
     } catch (err) {
@@ -36,7 +36,7 @@ export default function SignupStudent() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await axios.post("http://localhost:3000/api/auth/verify/student", {
+      const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/verify/student`, {
         email: formData.email,
         code,
       });

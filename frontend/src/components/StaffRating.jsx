@@ -17,10 +17,10 @@ export default function StaffRating() {
       try {
         const token = localStorage.getItem("token");
         const [dashboardRes, ratingRes] = await Promise.all([
-          axios.get("http://localhost:3000/api/student/dashboard-student", {
+          axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/student/dashboard-student`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("http://localhost:3000/api/student/staff-ratings", {
+          axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/student/staff-ratings`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -45,7 +45,7 @@ export default function StaffRating() {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:3000/api/student/rate",
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/student/rate`,
         { ratings },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -56,7 +56,7 @@ export default function StaffRating() {
       
       // Refetch average ratings to update the display
       try {
-        const ratingRes = await axios.get("http://localhost:3000/api/student/staff-ratings", {
+        const ratingRes = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/student/staff-ratings`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAvgRatings(ratingRes.data || {});
