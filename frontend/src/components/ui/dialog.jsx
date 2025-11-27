@@ -10,7 +10,7 @@ export function Dialog({ open, onOpenChange, children }) {
         className="absolute inset-0 bg-black/40"
         onClick={() => onOpenChange?.(false)}
       />
-      <div className="relative z-10 w-full max-w-2xl mx-4">{children}</div>
+      <div className="relative z-10 w-full max-w-2xl mx-4 flex justify-center">{children}</div>
     </div>
   ) : null;
 }

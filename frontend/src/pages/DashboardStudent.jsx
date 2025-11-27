@@ -257,7 +257,7 @@ export default function DashboardStudent() {
       </div>
 
       <Dialog open={showSubmitForm} onOpenChange={setShowSubmitForm}>
-        <DialogContent className="relative w-[500px] max-w-full bg-white rounded-xl shadow-lg p-6">
+        <DialogContent className="relative w-[500px] max-w-full mx-auto bg-white rounded-xl shadow-lg p-6">
           {/* Close button top-right */}
           <button
             aria-label="Close dialog"
