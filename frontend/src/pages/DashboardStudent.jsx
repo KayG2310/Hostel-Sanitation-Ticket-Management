@@ -127,7 +127,7 @@ export default function DashboardStudent() {
                 sessionStorage.clear();
                 window.location.href = "/";
               }}
-              className="text-sm text-gray-500 hover:text-gray-700 transition font-medium"
+              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
             >
               Logout
             </button>
@@ -200,48 +200,49 @@ export default function DashboardStudent() {
 
 
         <div className="mt-12 flex justify-center">
-          <div className="relative w-full max-w-6xl overflow-hidden">
+          <div className="relative w-full max-w-6xl pb-20">
+            <div className="overflow-hidden">
+              <h2 className="text-2xl font-semibold text-white-700 mb-6">
+                Your Tickets
+              </h2>
 
-            <h2 className="text-2xl font-semibold text-white-700 mb-6">
-              Your Tickets
-            </h2>
+              <div
+                className="flex transition-transform duration-500"
+                style={{ transform: `translateX(-${slideIndex * 50}%)` }}
+              >
+                {tickets.length === 0 ? (
+                  <div className="w-full text-center text-gray-600 py-20">
+                    No tickets raised yet.
+                  </div>
+                ) : (
+                  tickets.map(t => (
+                    <div key={t._id || t.id} className="w-1/2 px-6 shrink-0">
+                      <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
+                        <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
+                          <TicketCard ticket={t} />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
 
-            {/* LEFT ARROW */}
+            {/* LEFT ARROW - positioned below tickets */}
             <button
               onClick={() => setSlideIndex(prev => Math.max(prev - 1, 0))}
-              className="absolute left-1/2 top-[80%] -translate-x-[130%] -translate-y-1/2 z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
+              className="absolute left-1/2 bottom-0 -translate-x-[130%] z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
             >
               ◀
             </button>
 
-            {/* RIGHT ARROW */}
+            {/* RIGHT ARROW - positioned below tickets */}
             <button
               onClick={() => setSlideIndex(prev => prev + 1)}
-              className="absolute left-1/2 top-[80%] translate-x-[30%] -translate-y-1/2 z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
+              className="absolute left-1/2 bottom-0 translate-x-[30%] z-30 bg-white/70 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center shadow hover:scale-105 transition"
             >
               ▶
             </button>
-
-            <div
-              className="flex transition-transform duration-500"
-              style={{ transform: `translateX(-${slideIndex * 50}%)` }}
-            >
-              {tickets.length === 0 ? (
-                <div className="w-full text-center text-gray-600 py-20">
-                  No tickets raised yet.
-                </div>
-              ) : (
-                tickets.map(t => (
-                  <div key={t._id || t.id} className="w-1/2 px-6 shrink-0">
-                    <div className="relative z-10 p-6 rounded-3xl shadow-2xl">
-                      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-lg">
-                        <TicketCard ticket={t} />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         </div>
 
