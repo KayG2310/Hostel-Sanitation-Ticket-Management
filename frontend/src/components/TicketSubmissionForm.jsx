@@ -31,6 +31,7 @@ export default function TicketSubmissionForm({ roomNumber, onSubmit }) {
 
   const submit = async(e) => {
     e.preventDefault();
+    console.log("🚀 Starting ticket submission...");
     try {
         const form = new FormData();
         form.append("title", issue);
@@ -38,9 +39,17 @@ export default function TicketSubmissionForm({ roomNumber, onSubmit }) {
         form.append("roomNumber", roomNumber);
         if (photoFile) { // store the File object in state as photoFile when user selects file
           form.append("photo", photoFile);
+          console.log("📸 Photo file attached:", photoFile.name);
         }
         const token = localStorage.getItem("token");
-        const res = await fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/tickets/create`, {
+        if (!token) {
+          throw new Error("No authentication token found. Please login again.");
+        }
+        
+        const apiUrl = `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/tickets/create`;
+        console.log("📡 Sending request to:", apiUrl);
+        
+        const res = await fetch(apiUrl, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`
@@ -49,18 +58,23 @@ export default function TicketSubmissionForm({ roomNumber, onSubmit }) {
         body: form,
         });
         
+        console.log("📥 Response status:", res.status, res.statusText);
+        
         if (!res.ok) {
           let errorMessage = `Failed to submit ticket: ${res.status} ${res.statusText}`;
           try {
             const errorData = await res.json();
             errorMessage = errorData.message || errorMessage;
+            console.error("❌ Error response:", errorData);
           } catch (e) {
             // Response is not JSON, use status text
+            console.error("❌ Non-JSON error response");
           }
           throw new Error(errorMessage);
         }
         
         const data = await res.json();
+        console.log("✅ Ticket created successfully:", data);
         
         if (onSubmit) onSubmit(data.ticket || data);
         // reset local UI
@@ -70,7 +84,7 @@ export default function TicketSubmissionForm({ roomNumber, onSubmit }) {
         setPhotoFile(null);
         alert("✅ Ticket submitted successfully!");
         } catch (err) {
-        console.error("Ticket submit error", err);
+        console.error("❌ Ticket submit error:", err);
         alert(`❌ Failed to submit ticket: ${err.message || err.toString()}`);
         }
     };
