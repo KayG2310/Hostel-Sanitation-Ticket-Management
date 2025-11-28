@@ -4,11 +4,11 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import connectDB from "../backend/config/db.js";
-import ticketRoutes from "../backend/routes/ticketRoutes.js";
-import authRoutes from "../backend/routes/auth.js";
-import studentRoutes from "../backend/routes/studentRoutes.js";
-import caretakerRoutes from "../backend/routes/caretaker.js";
+import connectDB from "./config/db.js";
+import ticketRoutes from "./routes/ticketRoutes.js";
+import authRoutes from "./routes/auth.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import caretakerRoutes from "./routes/caretaker.js";
 
 dotenv.config();
 
