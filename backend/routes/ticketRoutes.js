@@ -79,10 +79,44 @@ router.post(
         ticketData.photoUrl = uploadedImage.secure_url; // Save Cloudinary URL
         console.log("✅ Photo uploaded successfully:", ticketData.photoUrl);
       }
+// --- After uploading to Cloudinary ---
+let imageInput = "none";
+if (req.file && ticketData.photoUrl) {
+  imageInput = ticketData.photoUrl; // pass Cloudinary URL
+}
+
+// Spawn Python process
+const py = spawn("/opt/anaconda3/bin/python", [
+  "./ml/cleanliness_model.py",
+  imageInput,
+  trimmedDescription,
+], { stdio: ["ignore", "pipe", "pipe"] });
+
+let out = "";
+let errOut = "";
+
+py.stdout.on("data", (data) => out += data.toString());
+py.stderr.on("data", (data) => errOut += data.toString());
+
+const exitCode = await new Promise((resolve) => py.on("close", (code) => resolve(code)));
+
+if (exitCode === 0 && out) {
+  try {
+    const parsed = JSON.parse(out.trim());
+    const score = Number(parsed?.score);
+    if (!Number.isNaN(score)) ticketData.aiConfidence = score;
+    else console.error("⚠️ Invalid AI output:", out);
+  } catch (err) {
+    console.error("⚠️ Parsing Python output failed:", err, out);
+  }
+} else {
+  console.error("⚠️ Python error:", errOut || out || "no output");
+}
 
       /* -----------------------------------------------------------
          SAVE TICKET FIRST (NON-BLOCKING)
       ----------------------------------------------------------- */
+
       console.log("💾 Saving ticket to database...");
       const newTicket = new Ticket(ticketData);
       await newTicket.save();
