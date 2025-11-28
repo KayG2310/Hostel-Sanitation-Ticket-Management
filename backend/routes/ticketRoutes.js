@@ -56,27 +56,13 @@ router.post(
       };
 
       /* -----------------------------------------------------------
-         UPLOAD TO CLOUDINARY IF PHOTO EXISTS
+         PHOTO HANDLING (ACCEPT BUT DON'T UPLOAD - FOR DEMO)
       ----------------------------------------------------------- */
       if (req.file) {
-        console.log("📸 Uploading photo to Cloudinary...");
-        const uploadedImage = await new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream(
-              {
-                folder: "hostel_tickets",
-                resource_type: "image",
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            )
-            .end(req.file.buffer);
-        });
-
-        ticketData.photoUrl = uploadedImage.secure_url; // Save Cloudinary URL
-        console.log("✅ Photo uploaded successfully:", ticketData.photoUrl);
+        // Accept photo but don't upload to Cloudinary (to avoid hanging)
+        // Photo is received but not stored - ticket created without photo URL
+        console.log("📸 Photo received (not uploaded - demo mode)");
+        // photoUrl will remain null/undefined - ticket still works
       }
 
       /* -----------------------------------------------------------
@@ -91,7 +77,7 @@ router.post(
          AI CLEANLINESS MODEL (TEXT-BASED ONLY - RUN IN BACKGROUND)
       ----------------------------------------------------------- */
       // Run AI analysis in background without blocking the response
-      // Only analyzes description text (photo is saved but not processed)
+      // Only analyzes description text (photo is not processed)
       if (trimmedDescription) {
         // Don't await - let it run in background
         (async () => {
