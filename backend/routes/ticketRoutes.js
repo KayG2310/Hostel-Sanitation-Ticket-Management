@@ -2,7 +2,6 @@
 import express from "express";
 import Ticket from "../models/Ticket.js";
 import multer from "multer";
-import { spawn } from "child_process";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
@@ -79,110 +78,92 @@ router.post(
         ticketData.photoUrl = uploadedImage.secure_url; // Save Cloudinary URL
         console.log("✅ Photo uploaded successfully:", ticketData.photoUrl);
       }
-// --- After uploading to Cloudinary ---
-let imageInput = "none";
-if (req.file && ticketData.photoUrl) {
-  imageInput = ticketData.photoUrl; // pass Cloudinary URL
-}
-
-// Spawn Python process
-const py = spawn("/opt/anaconda3/bin/python", [
-  "./ml/cleanliness_model.py",
-  imageInput,
-  trimmedDescription,
-], { stdio: ["ignore", "pipe", "pipe"] });
-
-let out = "";
-let errOut = "";
-
-py.stdout.on("data", (data) => out += data.toString());
-py.stderr.on("data", (data) => errOut += data.toString());
-
-const exitCode = await new Promise((resolve) => py.on("close", (code) => resolve(code)));
-
-if (exitCode === 0 && out) {
-  try {
-    const parsed = JSON.parse(out.trim());
-    const score = Number(parsed?.score);
-    if (!Number.isNaN(score)) ticketData.aiConfidence = score;
-    else console.error("⚠️ Invalid AI output:", out);
-  } catch (err) {
-    console.error("⚠️ Parsing Python output failed:", err, out);
-  }
-} else {
-  console.error("⚠️ Python error:", errOut || out || "no output");
-}
 
       /* -----------------------------------------------------------
-         SAVE TICKET FIRST (NON-BLOCKING)
+         SAVE TICKET FIRST
       ----------------------------------------------------------- */
-
       console.log("💾 Saving ticket to database...");
       const newTicket = new Ticket(ticketData);
       await newTicket.save();
       console.log("✅ Ticket saved successfully with ID:", newTicket._id);
 
       /* -----------------------------------------------------------
-         AI CLEANLINESS MODEL (RUN IN BACKGROUND - NON-BLOCKING)
+         AI CLEANLINESS MODEL (TEXT-BASED ONLY - RUN IN BACKGROUND)
       ----------------------------------------------------------- */
       // Run AI analysis in background without blocking the response
-      if (req.file || trimmedDescription) {
+      // Only analyzes description text (photo is saved but not processed)
+      if (trimmedDescription) {
         // Don't await - let it run in background
         (async () => {
           try {
-            console.log("🤖 Starting AI analysis in background...");
-            const imageInput = ticketData.photoUrl || "none";
-            const pythonPath = process.env.PYTHON_PATH || "python3";
-            const scriptPath = "./ml/cleanliness_model.py";
+            console.log("🤖 Starting AI analysis (text-based) in background...");
+            
+            const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+            
+            if (!openRouterApiKey) {
+              console.warn("⚠️ OPENROUTER_API_KEY not set - skipping AI analysis");
+              return;
+            }
 
-            // Add timeout to prevent hanging
-            const timeout = 30000; // 30 seconds
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error("AI analysis timeout")), timeout);
+            // Get text-based cleanliness score using OpenRouter API
+            const prompt = `You are a cleanliness evaluator. Based on the following facility issue description, give a cleanliness or urgency score between 0.0 (very clean or minor issue) and 1.0 (extremely dirty or urgent). Consider both hygiene and urgency level. Respond ONLY with a JSON object like: {"score": <number>}
+
+Description: "${trimmedDescription}"`;
+
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${openRouterApiKey}`,
+                "HTTP-Referer": process.env.FRONTEND_URL || "https://app1-ten-delta.vercel.app",
+                "X-Title": "Hostel Management System"
+              },
+              body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are an accurate cleanliness assessment assistant."
+                  },
+                  {
+                    role: "user",
+                    content: prompt
+                  }
+                ],
+                temperature: 0.3,
+                max_tokens: 150
+              })
             });
 
-            const py = spawn(
-              pythonPath,
-              [scriptPath, imageInput, trimmedDescription],
-              { stdio: ["ignore", "pipe", "pipe"] }
-            );
-
-            let out = "";
-            let errOut = "";
-
-            py.stdout.on("data", (data) => (out += data.toString()));
-            py.stderr.on("data", (data) => (errOut += data.toString()));
-
-            const exitCodePromise = new Promise((resolve) =>
-              py.on("close", (code) => resolve(code))
-            );
-
-            // Race between exit and timeout
-            const exitCode = await Promise.race([exitCodePromise, timeoutPromise]);
-
-            if (exitCode === 0 && out) {
-              try {
-                const parsed = JSON.parse(out.trim());
-                const score = Number(parsed?.score);
-
-                if (!Number.isNaN(score)) {
-                  // Update ticket with AI confidence
-                  await Ticket.findByIdAndUpdate(newTicket._id, {
-                    aiConfidence: score
-                  });
-                  console.log("✅ AI analysis completed, score:", score);
-                } else {
-                  console.error("⚠️ Invalid model output:", out);
-                }
-              } catch (err) {
-                console.error("⚠️ Error parsing Python output:", err, out);
-              }
-            } else {
-              console.error("⚠️ Python model error:", errOut || out || "no output");
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("⚠️ OpenRouter API error:", response.status, errorText);
+              return;
             }
-          } catch (pythonError) {
-            // Gracefully handle Python execution errors - ticket already saved
-            console.error("⚠️ AI analysis failed (ticket already saved):", pythonError.message);
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content?.trim() || "";
+
+            // Extract numeric score from response
+            const scoreMatch = content.match(/[-+]?\d*\.\d+|\d+/);
+            if (scoreMatch) {
+              let score = parseFloat(scoreMatch[0]);
+              // Normalize to 0-1 range
+              score = Math.max(0.0, Math.min(1.0, score));
+              // Convert to 0-100 scale (same format as Python script)
+              const finalScore = score * 100;
+
+              // Update ticket with AI confidence
+              await Ticket.findByIdAndUpdate(newTicket._id, {
+                aiConfidence: Math.round(finalScore * 100) / 100
+              });
+              console.log("✅ AI analysis completed, score:", finalScore);
+            } else {
+              console.error("⚠️ Could not extract score from AI response:", content);
+            }
+          } catch (aiError) {
+            // Gracefully handle AI errors - ticket already saved
+            console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
           }
         })();
       }
