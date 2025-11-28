@@ -48,17 +48,30 @@ export default function TicketSubmissionForm({ roomNumber, onSubmit }) {
         },
         body: form,
         });
-        if (!res.ok) throw new Error("Failed to submit ticket");
+        
+        if (!res.ok) {
+          let errorMessage = `Failed to submit ticket: ${res.status} ${res.statusText}`;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // Response is not JSON, use status text
+          }
+          throw new Error(errorMessage);
+        }
+        
         const data = await res.json();
+        
         if (onSubmit) onSubmit(data.ticket || data);
         // reset local UI
         setIssue("");
         setDescription("");
         setPhoto(null);
         setPhotoFile(null);
+        alert("✅ Ticket submitted successfully!");
         } catch (err) {
         console.error("Ticket submit error", err);
-        alert("Failed to submit ticket.");
+        alert(`❌ Failed to submit ticket: ${err.message || err.toString()}`);
         }
     };
 

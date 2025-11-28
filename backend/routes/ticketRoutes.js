@@ -77,39 +77,46 @@ router.post(
          AI CLEANLINESS MODEL (IF PHOTO OR DESCRIPTION EXISTS)
       ----------------------------------------------------------- */
       if (req.file || trimmedDescription) {
-        const imageInput = ticketData.photoUrl || "none";
+        try {
+          const imageInput = ticketData.photoUrl || "none";
+          const pythonPath = process.env.PYTHON_PATH || "python3";
+          const scriptPath = "./ml/cleanliness_model.py";
 
-        const py = spawn(
-          "/opt/anaconda3/bin/python",
-          ["./ml/cleanliness_model.py", imageInput, trimmedDescription],
-          { stdio: ["ignore", "pipe", "pipe"] }
-        );
+          const py = spawn(
+            pythonPath,
+            [scriptPath, imageInput, trimmedDescription],
+            { stdio: ["ignore", "pipe", "pipe"] }
+          );
 
-        let out = "";
-        let errOut = "";
+          let out = "";
+          let errOut = "";
 
-        py.stdout.on("data", (data) => (out += data.toString()));
-        py.stderr.on("data", (data) => (errOut += data.toString()));
+          py.stdout.on("data", (data) => (out += data.toString()));
+          py.stderr.on("data", (data) => (errOut += data.toString()));
 
-        const exitCode = await new Promise((resolve) =>
-          py.on("close", (code) => resolve(code))
-        );
+          const exitCode = await new Promise((resolve) =>
+            py.on("close", (code) => resolve(code))
+          );
 
-        if (exitCode === 0 && out) {
-          try {
-            const parsed = JSON.parse(out.trim());
-            const score = Number(parsed?.score);
+          if (exitCode === 0 && out) {
+            try {
+              const parsed = JSON.parse(out.trim());
+              const score = Number(parsed?.score);
 
-            if (!Number.isNaN(score)) {
-              ticketData.aiConfidence = score;
-            } else {
-              console.error("⚠️ Invalid model output:", out);
+              if (!Number.isNaN(score)) {
+                ticketData.aiConfidence = score;
+              } else {
+                console.error("⚠️ Invalid model output:", out);
+              }
+            } catch (err) {
+              console.error("⚠️ Error parsing Python output:", err, out);
             }
-          } catch (err) {
-            console.error("⚠️ Error parsing Python output:", err, out);
+          } else {
+            console.error("⚠️ Python model error:", errOut || out || "no output");
           }
-        } else {
-          console.error("⚠️ Python model error:", errOut || out || "no output");
+        } catch (pythonError) {
+          // Gracefully handle Python execution errors - ticket creation should still succeed
+          console.error("⚠️ Python script execution failed (continuing without AI analysis):", pythonError.message);
         }
       }
 
