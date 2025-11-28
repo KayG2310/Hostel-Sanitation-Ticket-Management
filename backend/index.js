@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: `${import.meta.env.VITE_REACT_APP_FRONTEND_BASE_URL}`,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
