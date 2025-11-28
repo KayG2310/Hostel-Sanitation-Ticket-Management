@@ -91,8 +91,7 @@ router.post(
               await Ticket.findByIdAndUpdate(newTicket._id, {
                 aiConfidence: 50.0
               });
-              return;
-            }
+            } else {
 
             // Get text-based cleanliness score using OpenRouter API
             const prompt = `Evaluate the cleanliness urgency of this hostel facility issue. Give a score from 0.0 (very clean/minor) to 1.0 (extremely dirty/urgent). Respond with ONLY a number between 0.0 and 1.0, nothing else.
@@ -134,8 +133,7 @@ Issue: "${trimmedDescription}"`;
               await Ticket.findByIdAndUpdate(newTicket._id, {
                 aiConfidence: 50.0
               });
-              return;
-            }
+            } else {
 
             const data = await response.json();
             console.log("📦 OpenRouter response data:", JSON.stringify(data).substring(0, 200));
@@ -183,6 +181,8 @@ Issue: "${trimmedDescription}"`;
               });
               console.log("⚠️ Using fallback score:", fallbackScore);
             }
+            }
+          }
         } catch (aiError) {
           // Gracefully handle AI errors - ticket already saved
           console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
