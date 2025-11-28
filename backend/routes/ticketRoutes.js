@@ -74,28 +74,32 @@ router.post(
       console.log("✅ Ticket saved successfully with ID:", newTicket._id);
 
       /* -----------------------------------------------------------
-         AI CLEANLINESS MODEL (TEXT-BASED ONLY - RUN IN BACKGROUND)
+         AI CLEANLINESS MODEL (TEXT-BASED ONLY)
       ----------------------------------------------------------- */
-      // Run AI analysis in background without blocking the response
+      // Run AI analysis and wait for it to complete
       // Only analyzes description text (photo is not processed)
       if (trimmedDescription) {
-        // Don't await - let it run in background
-        (async () => {
-          try {
-            console.log("🤖 Starting AI analysis (text-based) in background...");
+        try {
+          console.log("🤖 Starting AI analysis (text-based)...");
+            console.log("📝 Description to analyze:", trimmedDescription.substring(0, 100));
             
             const openRouterApiKey = process.env.OPENROUTER_API_KEY;
             
             if (!openRouterApiKey) {
               console.warn("⚠️ OPENROUTER_API_KEY not set - skipping AI analysis");
+              // Set a default score if API key is missing
+              await Ticket.findByIdAndUpdate(newTicket._id, {
+                aiConfidence: 50.0
+              });
               return;
             }
 
             // Get text-based cleanliness score using OpenRouter API
-            const prompt = `You are a cleanliness evaluator. Based on the following facility issue description, give a cleanliness or urgency score between 0.0 (very clean or minor issue) and 1.0 (extremely dirty or urgent). Consider both hygiene and urgency level. Respond ONLY with a JSON object like: {"score": <number>}
+            const prompt = `Evaluate the cleanliness urgency of this hostel facility issue. Give a score from 0.0 (very clean/minor) to 1.0 (extremely dirty/urgent). Respond with ONLY a number between 0.0 and 1.0, nothing else.
 
-Description: "${trimmedDescription}"`;
+Issue: "${trimmedDescription}"`;
 
+            console.log("📤 Sending request to OpenRouter API...");
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
               method: "POST",
               headers: {
@@ -109,7 +113,7 @@ Description: "${trimmedDescription}"`;
                 messages: [
                   {
                     role: "system",
-                    content: "You are an accurate cleanliness assessment assistant."
+                    content: "You are a cleanliness evaluator. Always respond with only a number between 0.0 and 1.0."
                   },
                   {
                     role: "user",
@@ -117,47 +121,95 @@ Description: "${trimmedDescription}"`;
                   }
                 ],
                 temperature: 0.3,
-                max_tokens: 150
+                max_tokens: 50
               })
             });
+
+            console.log("📥 OpenRouter response status:", response.status);
 
             if (!response.ok) {
               const errorText = await response.text();
               console.error("⚠️ OpenRouter API error:", response.status, errorText);
+              // Set a default score on error
+              await Ticket.findByIdAndUpdate(newTicket._id, {
+                aiConfidence: 50.0
+              });
               return;
             }
 
             const data = await response.json();
+            console.log("📦 OpenRouter response data:", JSON.stringify(data).substring(0, 200));
+            
             const content = data.choices?.[0]?.message?.content?.trim() || "";
+            console.log("💬 AI response content:", content);
 
-            // Extract numeric score from response
-            const scoreMatch = content.match(/[-+]?\d*\.\d+|\d+/);
-            if (scoreMatch) {
-              let score = parseFloat(scoreMatch[0]);
+            // Extract numeric score from response - try multiple patterns
+            let score = null;
+            
+            // Try to find JSON first
+            const jsonMatch = content.match(/\{"score":\s*([\d.]+)\}/i) || content.match(/score["\s:]+([\d.]+)/i);
+            if (jsonMatch) {
+              score = parseFloat(jsonMatch[1]);
+            } else {
+              // Try to find any number
+              const numberMatch = content.match(/([0-9]*\.?[0-9]+)/);
+              if (numberMatch) {
+                score = parseFloat(numberMatch[0]);
+              }
+            }
+
+            if (score !== null && !isNaN(score)) {
               // Normalize to 0-1 range
               score = Math.max(0.0, Math.min(1.0, score));
-              // Convert to 0-100 scale (same format as Python script)
-              const finalScore = score * 100;
+              // Convert to 0-100 scale
+              const finalScore = Math.round(score * 100 * 100) / 100;
 
               // Update ticket with AI confidence
               await Ticket.findByIdAndUpdate(newTicket._id, {
-                aiConfidence: Math.round(finalScore * 100) / 100
+                aiConfidence: finalScore
               });
               console.log("✅ AI analysis completed, score:", finalScore);
             } else {
-              console.error("⚠️ Could not extract score from AI response:", content);
+              console.error("⚠️ Could not extract valid score from AI response:", content);
+              // Set a default score based on description length/keywords as fallback
+              const urgencyKeywords = ['dirty', 'filthy', 'messy', 'urgent', 'severe', 'terrible', 'disgusting', 'broken', 'leak', 'overflow'];
+              const hasUrgency = urgencyKeywords.some(keyword => 
+                trimmedDescription.toLowerCase().includes(keyword)
+              );
+              const fallbackScore = hasUrgency ? 75.0 : 40.0;
+              
+              await Ticket.findByIdAndUpdate(newTicket._id, {
+                aiConfidence: fallbackScore
+              });
+              console.log("⚠️ Using fallback score:", fallbackScore);
             }
-          } catch (aiError) {
-            // Gracefully handle AI errors - ticket already saved
-            console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
+        } catch (aiError) {
+          // Gracefully handle AI errors - ticket already saved
+          console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
+          console.error("⚠️ Error stack:", aiError.stack);
+          // Set a default score on error
+          try {
+            await Ticket.findByIdAndUpdate(newTicket._id, {
+              aiConfidence: 50.0
+            });
+          } catch (updateError) {
+            console.error("⚠️ Failed to update ticket with default score:", updateError.message);
           }
-        })();
+        }
+      } else {
+        // No description - set default score
+        await Ticket.findByIdAndUpdate(newTicket._id, {
+          aiConfidence: 50.0
+        });
       }
+      
+      // Refresh ticket to get updated AI confidence
+      const updatedTicket = await Ticket.findById(newTicket._id);
 
-      // Return response immediately - don't wait for AI
+      // Return response with updated ticket (including AI score)
       return res.status(201).json({
         message: "Ticket created successfully",
-        ticket: newTicket,
+        ticket: updatedTicket || newTicket,
       });
     } catch (error) {
       console.error("❌ Error creating ticket:", error);
