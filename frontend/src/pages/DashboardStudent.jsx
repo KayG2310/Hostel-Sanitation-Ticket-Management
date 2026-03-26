@@ -104,7 +104,7 @@ export default function DashboardStudent() {
         roomNumber: payload.roomNumber || userData.roomNumber,
         title: payload.title,
         description: payload.description,
-        photo: payload.photo || null,
+        photoUrl: req.body.photo || null,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });

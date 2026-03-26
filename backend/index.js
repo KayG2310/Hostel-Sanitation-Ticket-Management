@@ -1,5 +1,6 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,7 +11,7 @@ import authRoutes from "./routes/auth.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import caretakerRoutes from "./routes/caretaker.js";
 
-dotenv.config();
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,3 +42,8 @@ app.get("/", (req, res) => {
 });
 
 export default app;
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

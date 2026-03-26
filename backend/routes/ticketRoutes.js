@@ -7,16 +7,9 @@ import User from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
-
-/* -----------------------------------------------------------
-   MULTER (MEMORY STORAGE FOR VERCEL)
------------------------------------------------------------ */
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-/* -----------------------------------------------------------
-   CREATE (RAISE) TICKET
------------------------------------------------------------ */
 router.post(
   "/create",
   verifyToken,
@@ -31,8 +24,6 @@ router.post(
       const { roomNumber, title, description } = req.body;
       const trimmedTitle = title?.trim();
       const trimmedDescription = description?.trim();
-
-      // Validation
       if (!trimmedTitle || !trimmedDescription) {
         return res
           .status(400)
@@ -45,6 +36,7 @@ router.post(
         ? parseInt(String(roomNumber)[0]) || null
         : null;
 
+      let photoUrl = null;
       const ticketData = {
         studentEmail,
         roomNumber,
@@ -53,31 +45,31 @@ router.post(
         description: trimmedDescription,
         status: "open",
         createdAt: new Date(),
+        photoUrl,
       };
-
-      /* -----------------------------------------------------------
-         PHOTO HANDLING (ACCEPT BUT DON'T UPLOAD - FOR DEMO)
-      ----------------------------------------------------------- */
       if (req.file) {
-        // Accept photo but don't upload to Cloudinary (to avoid hanging)
-        // Photo is received but not stored - ticket created without photo URL
-        console.log("📸 Photo received (not uploaded - demo mode)");
-        // photoUrl will remain null/undefined - ticket still works
+        try {
+          const result = await new Promise((resolve, reject) => {
+            cloudinary.uploader.upload_stream(
+              { folder: "Home/hostel_tickets" },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            ).end(req.file.buffer);
+          });
+      
+          photoUrl = result.secure_url;
+          console.log("☁️ Image uploaded:", photoUrl);
+        } catch (err) {
+          console.error("❌ Cloudinary upload failed:", err);
+        }
       }
-
-      /* -----------------------------------------------------------
-         SAVE TICKET FIRST
-      ----------------------------------------------------------- */
+      ticketData.photoUrl = photoUrl;
       console.log("💾 Saving ticket to database...");
       const newTicket = new Ticket(ticketData);
       await newTicket.save();
       console.log("✅ Ticket saved successfully with ID:", newTicket._id);
-
-      /* -----------------------------------------------------------
-         AI CLEANLINESS MODEL (TEXT-BASED ONLY)
-      ----------------------------------------------------------- */
-      // Run AI analysis and wait for it to complete
-      // Only analyzes description text (photo is not processed)
       if (trimmedDescription) {
         try {
           console.log("🤖 Starting AI analysis (text-based)...");
@@ -87,13 +79,10 @@ router.post(
             
             if (!openRouterApiKey) {
               console.warn("⚠️ OPENROUTER_API_KEY not set - skipping AI analysis");
-              // Set a default score if API key is missing
               await Ticket.findByIdAndUpdate(newTicket._id, {
                 aiConfidence: 50.0
               });
             } else {
-
-            // Get text-based cleanliness score using OpenRouter API
             const prompt = `Evaluate the cleanliness urgency of this hostel facility issue. Give a score from 0.0 (very clean/minor) to 1.0 (extremely dirty/urgent). Respond with ONLY a number between 0.0 and 1.0, nothing else.
 
 Issue: "${trimmedDescription}"`;
@@ -129,7 +118,6 @@ Issue: "${trimmedDescription}"`;
             if (!response.ok) {
               const errorText = await response.text();
               console.error("⚠️ OpenRouter API error:", response.status, errorText);
-              // Set a default score on error
               await Ticket.findByIdAndUpdate(newTicket._id, {
                 aiConfidence: 50.0
               });
@@ -140,16 +128,11 @@ Issue: "${trimmedDescription}"`;
             
             const content = data.choices?.[0]?.message?.content?.trim() || "";
             console.log("💬 AI response content:", content);
-
-            // Extract numeric score from response - try multiple patterns
             let score = null;
-            
-            // Try to find JSON first
             const jsonMatch = content.match(/\{"score":\s*([\d.]+)\}/i) || content.match(/score["\s:]+([\d.]+)/i);
             if (jsonMatch) {
               score = parseFloat(jsonMatch[1]);
             } else {
-              // Try to find any number
               const numberMatch = content.match(/([0-9]*\.?[0-9]+)/);
               if (numberMatch) {
                 score = parseFloat(numberMatch[0]);
@@ -157,19 +140,14 @@ Issue: "${trimmedDescription}"`;
             }
 
             if (score !== null && !isNaN(score)) {
-              // Normalize to 0-1 range
               score = Math.max(0.0, Math.min(1.0, score));
-              // Convert to 0-100 scale
               const finalScore = Math.round(score * 100 * 100) / 100;
-
-              // Update ticket with AI confidence
               await Ticket.findByIdAndUpdate(newTicket._id, {
                 aiConfidence: finalScore
               });
               console.log("✅ AI analysis completed, score:", finalScore);
             } else {
               console.error("⚠️ Could not extract valid score from AI response:", content);
-              // Set a default score based on description length/keywords as fallback
               const urgencyKeywords = ['dirty', 'filthy', 'messy', 'urgent', 'severe', 'terrible', 'disgusting', 'broken', 'leak', 'overflow'];
               const hasUrgency = urgencyKeywords.some(keyword => 
                 trimmedDescription.toLowerCase().includes(keyword)
@@ -184,10 +162,8 @@ Issue: "${trimmedDescription}"`;
             }
           }
         } catch (aiError) {
-          // Gracefully handle AI errors - ticket already saved
           console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
           console.error("⚠️ Error stack:", aiError.stack);
-          // Set a default score on error
           try {
             await Ticket.findByIdAndUpdate(newTicket._id, {
               aiConfidence: 50.0
@@ -197,16 +173,11 @@ Issue: "${trimmedDescription}"`;
           }
         }
       } else {
-        // No description - set default score
         await Ticket.findByIdAndUpdate(newTicket._id, {
           aiConfidence: 50.0
         });
       }
-      
-      // Refresh ticket to get updated AI confidence
       const updatedTicket = await Ticket.findById(newTicket._id);
-
-      // Return response with updated ticket (including AI score)
       return res.status(201).json({
         message: "Ticket created successfully",
         ticket: updatedTicket || newTicket,
@@ -220,10 +191,6 @@ Issue: "${trimmedDescription}"`;
     }
   }
 );
-
-/* -----------------------------------------------------------
-   GET ALL TICKETS FOR A STUDENT
------------------------------------------------------------ */
 router.get("/student/:email", async (req, res) => {
   try {
     const tickets = await Ticket.find({ studentEmail: req.params.email });
