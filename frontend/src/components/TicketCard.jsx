@@ -5,8 +5,22 @@ import { Calendar, MapPin, User } from "lucide-react";
 import AIConfidenceBadge from "./AIConfidenceBadge";
 
 export default function TicketCard({ ticket, onClick }) {
+  // Normalize backend statuses to the ones this card knows how to style.
+  const statusForColor =
+    ticket.status === "open"
+      ? "pending"
+      : ticket.status === "resolved_pending"
+        ? "resolved"
+        : ticket.status;
+
+  const statusForLabel =
+    ticket.status === "open" ? "pending" : ticket.status;
+
+  const floorSelected = ticket.floorSelected ?? ticket.floor ?? "-";
+  const locationSelected = ticket.locationSelected ?? null;
+
   const getStatusColor = () => {
-    switch (ticket.status) {
+    switch (statusForColor) {
       case "pending":
         return "bg-status-pending text-status-pending-foreground";
       case "in-progress":
@@ -17,13 +31,16 @@ export default function TicketCard({ ticket, onClick }) {
     }
   };
 
-  const statusLabel = (ticket.status || "").replace("-", " ").toUpperCase();
+  const statusLabel = (statusForLabel || "")
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .toUpperCase();
 
   return (
     <Card
       className={`w-full hover-elevate cursor-pointer relative overflow-hidden border-l-4 ${
-        ticket.status === "pending" ? "border-l-status-pending" :
-        ticket.status === "in-progress" ? "border-l-status-in-progress" :
+        statusForColor === "pending" ? "border-l-4 ${ticket.aiConfidence > 75? \"border-l-red-500\": ticket.aiConfidence > 50? \"border-l-yellow-500\": \"border-l-green-500\"}" :
+        statusForColor === "in-progress" ? "border-l-status-in-progress" :
         "border-l-status-resolved"
       }`}
       onClick={onClick}
@@ -40,11 +57,22 @@ export default function TicketCard({ ticket, onClick }) {
             </Badge>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              Room {ticket.roomNumber}, Floor {ticket.floor}
+              Room {ticket.roomNumber}
             </span>
+
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-medium">
+              Floor {floorSelected}
+            </span>
+
+            {locationSelected && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+                Location: {locationSelected}
+              </span>
+            )}
+
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {ticket.submittedAt}
@@ -60,7 +88,8 @@ export default function TicketCard({ ticket, onClick }) {
           <img
             src={ticket.photoUrl}
             alt="Issue evidence"
-            className="w-full h-40 object-cover rounded-md"
+            loading="lazy"
+            className="w-full h-48 object-cover rounded-lg border border-gray-200 bg-gray-50"
             data-testid="img-ticket-photo"
           />
         )}

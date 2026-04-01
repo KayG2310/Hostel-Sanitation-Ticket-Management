@@ -5,7 +5,7 @@ import multer from "multer";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 import cloudinary from "../config/cloudinary.js";
-
+import Replicate from "replicate";
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -19,9 +19,9 @@ router.post(
     console.log("📋 Request body:", { roomNumber: req.body.roomNumber, title: req.body.title, description: req.body.description?.substring(0, 50) + "..." });
     console.log("📸 File uploaded:", req.file ? `Yes (${req.file.size} bytes)` : "No");
     console.log("👤 User ID:", req.user?.id);
-    
+
     try {
-      const { roomNumber, title, description } = req.body;
+      const { roomNumber, title, description, floorSelected, locationSelected } = req.body;
       const trimmedTitle = title?.trim();
       const trimmedDescription = description?.trim();
       if (!trimmedTitle || !trimmedDescription) {
@@ -46,6 +46,8 @@ router.post(
         status: "open",
         createdAt: new Date(),
         photoUrl,
+        floorSelected,
+        locationSelected,
       };
       if (req.file) {
         try {
@@ -58,7 +60,7 @@ router.post(
               }
             ).end(req.file.buffer);
           });
-      
+
           photoUrl = result.secure_url;
           console.log("☁️ Image uploaded:", photoUrl);
         } catch (err) {
@@ -72,105 +74,226 @@ router.post(
       console.log("✅ Ticket saved successfully with ID:", newTicket._id);
       if (trimmedDescription) {
         try {
-          console.log("🤖 Starting AI analysis (text-based)...");
-            console.log("📝 Description to analyze:", trimmedDescription.substring(0, 100));
-            
-            const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-            
-            if (!openRouterApiKey) {
-              console.warn("⚠️ OPENROUTER_API_KEY not set - skipping AI analysis");
-              await Ticket.findByIdAndUpdate(newTicket._id, {
-                aiConfidence: 50.0
+          console.log("🤖 Starting AI analysis (multimodal)...");
+          const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+          let textScore = 0.5;
+          if (!openRouterApiKey) {
+            console.warn("⚠️ OPENROUTER_API_KEY not set - using default text score");
+          } else {
+            try {
+              const prompt = `You are evaluating cleanliness issues in a hostel. Rate the urgency from 0.0 to 1.0 based on:- Hygiene risk - Severity - Impact on students ONLY return a number between 0.0 and 1.0. Issue: "${trimmedDescription}"`;
+              const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${openRouterApiKey}`,
+                },
+                body: JSON.stringify({
+                  model: "gpt-4o-mini",
+                  messages: [
+                    { role: "system", content: "Return only a number between 0.0 and 1.0." },
+                    { role: "user", content: prompt },
+                  ],
+                  temperature: 0.2,
+                  max_tokens: 20,
+                }),
               });
-            } else {
-            const prompt = `Evaluate the cleanliness urgency of this hostel facility issue. Give a score from 0.0 (very clean/minor) to 1.0 (extremely dirty/urgent). Respond with ONLY a number between 0.0 and 1.0, nothing else.
 
-Issue: "${trimmedDescription}"`;
+              if (response.ok) {
+                const data = await response.json();
+                const content = data.choices?.[0]?.message?.content?.trim() || "";
 
-            console.log("📤 Sending request to OpenRouter API...");
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${openRouterApiKey}`,
-                "HTTP-Referer": process.env.FRONTEND_URL || "https://app1-ten-delta.vercel.app",
-                "X-Title": "Hostel Management System"
-              },
-              body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages: [
-                  {
-                    role: "system",
-                    content: "You are a cleanliness evaluator. Always respond with only a number between 0.0 and 1.0."
-                  },
-                  {
-                    role: "user",
-                    content: prompt
-                  }
-                ],
-                temperature: 0.3,
-                max_tokens: 50
-              })
-            });
+                let score = parseFloat(content);
+                if (!isNaN(score)) {
+                  textScore = Math.max(0, Math.min(1, score));
+                }
 
-            console.log("📥 OpenRouter response status:", response.status);
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error("⚠️ OpenRouter API error:", response.status, errorText);
-              await Ticket.findByIdAndUpdate(newTicket._id, {
-                aiConfidence: 50.0
-              });
-            } else {
-
-            const data = await response.json();
-            console.log("📦 OpenRouter response data:", JSON.stringify(data).substring(0, 200));
-            
-            const content = data.choices?.[0]?.message?.content?.trim() || "";
-            console.log("💬 AI response content:", content);
-            let score = null;
-            const jsonMatch = content.match(/\{"score":\s*([\d.]+)\}/i) || content.match(/score["\s:]+([\d.]+)/i);
-            if (jsonMatch) {
-              score = parseFloat(jsonMatch[1]);
-            } else {
-              const numberMatch = content.match(/([0-9]*\.?[0-9]+)/);
-              if (numberMatch) {
-                score = parseFloat(numberMatch[0]);
+                console.log("🧠 Text score:", textScore);
+              } else {
+                console.warn("⚠️ OpenRouter failed, using fallback text score");
               }
+            } catch (err) {
+              console.warn("⚠️ Text AI error:", err.message);
             }
+          }
+          // =========================
+          // 2. IMAGE SCORE (Vision LLM)
+          // =========================
+          let imageScore = 0.5;
+          let predictedLabel = "Others";
+          let similarity = 0.4;
+          if (photoUrl && process.env.OPENROUTER_API_KEY) {
+            try {
+              console.log("🖼️ Running vision model for image classification...");
 
-            if (score !== null && !isNaN(score)) {
-              score = Math.max(0.0, Math.min(1.0, score));
-              const finalScore = Math.round(score * 100 * 100) / 100;
-              await Ticket.findByIdAndUpdate(newTicket._id, {
-                aiConfidence: finalScore
+              const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "meta-llama/llama-3.2-11b-vision-instruct",
+                  messages: [
+                    {
+                      role: "system",
+                      content:
+                        "You are an image classifier. Only return ONE label from this list exactly:\n" +
+                        `"clean room", "dirty room", "garbage", "overflowing toilet", "water leak", "stains", "pest infestation", "clean washroom", "Others".\n` +
+                        "Return ONLY the label, nothing else.",
+                    },
+                    {
+                      role: "user",
+                      content: [
+                        {
+                          type: "text",
+                          text: "Classify this hostel cleanliness image.",
+                        },
+                        {
+                          type: "image_url",
+                          image_url: {
+                            url: photoUrl,
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                  temperature: 0,
+                  max_tokens: 20,
+                }),
               });
-              console.log("✅ AI analysis completed, score:", finalScore);
-            } else {
-              console.error("⚠️ Could not extract valid score from AI response:", content);
-              const urgencyKeywords = ['dirty', 'filthy', 'messy', 'urgent', 'severe', 'terrible', 'disgusting', 'broken', 'leak', 'overflow'];
-              const hasUrgency = urgencyKeywords.some(keyword => 
-                trimmedDescription.toLowerCase().includes(keyword)
-              );
-              const fallbackScore = hasUrgency ? 75.0 : 40.0;
-              
-              await Ticket.findByIdAndUpdate(newTicket._id, {
-                aiConfidence: fallbackScore
-              });
-              console.log("⚠️ Using fallback score:", fallbackScore);
-            }
+
+              const data = await response.json();
+
+              let label =
+                data.choices?.[0]?.message?.content?.trim().toLowerCase() || "others";
+
+              console.log("🧠 Raw label:", label);
+
+              // normalize label (important)
+              const validLabels = [
+                "clean room",
+                "dirty room",
+                "garbage",
+                "overflowing toilet",
+                "water leak",
+                "stains",
+                "pest infestation",
+                "clean washroom",
+                "others",
+              ];
+
+              if (!validLabels.includes(label)) {
+                label = "others";
+              }
+
+              predictedLabel = label;
+
+              const map = {
+                "clean room": 0.1,
+                "clean washroom": 0.1,
+                "dirty room": 0.6,
+                "garbage": 0.9,
+                "overflowing toilet": 1.0,
+                "water leak": 0.8,
+                "stains": 0.5,
+                "pest infestation": 1.0,
+                "others": 0.5,
+              };
+
+              imageScore = map[label];
+
+              console.log("🖼️ Final label:", predictedLabel);
+              console.log("🖼️ Image score:", imageScore);
+
+              try {
+                const prompt = `You are a context similarity matcher. Your task is to find the similarity between a text description and its predicted label. Only return a similarity score between 0.0 and 1.0. Text Description: "${trimmedDescription}", Predicted label: "${predictedLabel}"`;
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${openRouterApiKey}`,
+                  },
+                  body: JSON.stringify({
+                    model: "gpt-4o-mini",
+                    messages: [
+                      { role: "system", content: "Return only a number between 0.0 and 1.0." },
+                      { role: "user", content: prompt },
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 20,
+                  }),
+                });
+    
+                if (response.ok) {
+                  const data = await response.json();
+                  const content = data.choices?.[0]?.message?.content?.trim() || "";
+    
+                  let score = parseFloat(content);
+                  if (!isNaN(score)) {
+                    textScore = Math.max(0, Math.min(1, score));
+                  }
+                  similarity = textScore;
+                } else {
+                  console.warn("⚠️ OpenRouter failed, using fallback text score");
+                }
+              } catch (err) {
+                console.warn("⚠️ Text AI error:", err.message);
+              }
+            } catch (err) {
+              console.error("❌ Vision classification failed:", err.message);
             }
           }
+
+          // =========================
+          // 3. SIMILARITY
+          // =========================
+
+          
+
+          console.log("🔗 Similarity:", similarity);
+          // =========================
+          // 4. DYNAMIC WEIGHTS
+          // =========================
+          let w_img, w_txt;
+
+          if (similarity > 0.7) {
+            w_img = 0.6;
+            w_txt = 0.4;
+          } 
+          else if(!photoUrl){
+            w_img = 0;
+            w_txt = 0.9;
+          }
+          else {
+            w_img = 0.3;
+            w_txt = 0.7;
+          }
+
+          console.log("⚖️ Weights → Image:", w_img, "Text:", w_txt);
+
+          // =========================
+          // 5. FINAL SCORE
+          // =========================
+          const finalScore = Math.round(
+            (w_img * imageScore + w_txt * textScore) * 100
+          );
+
+          console.log("✅ Final AI Score:", finalScore);
+
+          // =========================
+          // 6. SAVE TO DB
+          // =========================
+          await Ticket.findByIdAndUpdate(newTicket._id, {
+            aiConfidence: finalScore,
+          });
+
         } catch (aiError) {
-          console.error("⚠️ AI analysis failed (ticket already saved):", aiError.message);
-          console.error("⚠️ Error stack:", aiError.stack);
-          try {
-            await Ticket.findByIdAndUpdate(newTicket._id, {
-              aiConfidence: 50.0
-            });
-          } catch (updateError) {
-            console.error("⚠️ Failed to update ticket with default score:", updateError.message);
-          }
+          console.error("⚠️ AI analysis failed:", aiError.message);
+
+          await Ticket.findByIdAndUpdate(newTicket._id, {
+            aiConfidence: 50,
+          });
         }
       } else {
         await Ticket.findByIdAndUpdate(newTicket._id, {
