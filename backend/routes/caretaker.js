@@ -261,25 +261,38 @@ router.get("/staff-ratings", verifyToken, async (req, res) => {
     ]);
 
     // Populate Staff name for each row
+    // Populate Staff name for each row (filtered by caretaker's hostel)
     const staffIds = perStaff.map((r) => r.staffId);
-    const staffDocs = await Staff.find({ _id: { $in: staffIds } }).select("name phone isActive");
+    const staffFilter = { _id: { $in: staffIds } };
+    if (caretaker.hostelId) {
+      staffFilter.hostelId = caretaker.hostelId;
+    }
+    const staffDocs = await Staff.find(staffFilter).select("name phone isActive");
     const staffMap = {};
     staffDocs.forEach((s) => { staffMap[s._id.toString()] = s; });
 
-    const result = perStaff.map((r) => ({
-      staffId: r.staffId,
-      name: staffMap[r.staffId.toString()]?.name || "Unknown",
-      phone: staffMap[r.staffId.toString()]?.phone || null,
-      isActive: staffMap[r.staffId.toString()]?.isActive ?? true,
-      avgRating: r.avgRating,
-      totalRatings: r.totalRatings,
-      duties: r.duties.sort((a, b) => a.floor - b.floor || a.janitorType.localeCompare(b.janitorType)),
-    }));
+    const result = perStaff
+      .filter((r) => staffMap[r.staffId.toString()]) // Only keep ratings for staff from this hostel
+      .map((r) => ({
+        staffId: r.staffId,
+        name: staffMap[r.staffId.toString()]?.name || "Unknown",
+        phone: staffMap[r.staffId.toString()]?.phone || null,
+        isActive: staffMap[r.staffId.toString()]?.isActive ?? true,
+        avgRating: r.avgRating,
+        totalRatings: r.totalRatings,
+        duties: r.duties.sort((a, b) => a.floor - b.floor || a.janitorType.localeCompare(b.janitorType)),
+      }));
 
     // Also include legacy ratings (janitorName set, staffId null) as a single unattributed group
-    const legacyCount = await Rating.countDocuments({
+    // Also include legacy ratings (janitorName set, staffId null) as a single unattributed group
+    const legacyFilter = {
       $or: [{ staffId: null }, { staffId: { $exists: false } }],
-    });
+    };
+    if (caretaker.hostelId) {
+      legacyFilter.hostelId = { $in: [caretaker.hostelId, null] };
+    }
+
+    const legacyCount = await Rating.countDocuments(legacyFilter);
 
     res.json({ ratings: result, legacyCount });
   } catch (err) {

@@ -141,7 +141,7 @@ router.post("/rate", verifyToken, async (req, res) => {
     const floor = getFloor(user.roomNumber);
 
     // Fetch room to get current Staff assignments
-    const room = await Room.findOne({ roomNumber: user.roomNumber });
+    const room = await Room.findOne({ roomNumber: user.roomNumber, hostelId: user.hostelId });
     const currentJanitors = room?.janitors || {};
 
     const savedRatings = await Promise.all(
@@ -150,6 +150,7 @@ router.post("/rate", verifyToken, async (req, res) => {
         const staffId = currentJanitors[janitorType] || null;
         return new Rating({
           userId: user._id,
+          hostelId: user.hostelId || null,
           floor,
           janitorType,
           staffId,      // the actual person being rated
@@ -172,9 +173,13 @@ router.get("/staff-ratings", verifyToken, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const floor = getFloor(user.roomNumber);
+    const matchFilter = { floor };
+    if (user.hostelId) {
+      matchFilter.hostelId = user.hostelId;
+    }
 
     const avgRatings = await Rating.aggregate([
-      { $match: { floor } },
+      { $match: matchFilter },
       { $group: { _id: "$janitorType", avgRating: { $avg: "$rating" } } },
     ]);
 
