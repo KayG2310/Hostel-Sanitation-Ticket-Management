@@ -38,7 +38,7 @@ export default function TicketCard({ ticket, onClick }) {
 
   return (
     <Card
-      className={`w-full hover-elevate cursor-pointer relative overflow-hidden border-l-4 ${
+      className={`w-full h-full flex flex-col hover-elevate cursor-pointer relative overflow-hidden border-l-4 ${
         statusForColor === "pending" ? "border-l-4 ${ticket.aiConfidence > 75? \"border-l-red-500\": ticket.aiConfidence > 50? \"border-l-yellow-500\": \"border-l-green-500\"}" :
         statusForColor === "in-progress" ? "border-l-status-in-progress" :
         "border-l-status-resolved"
@@ -81,7 +81,7 @@ export default function TicketCard({ ticket, onClick }) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1 flex flex-col">
         <p className="text-sm text-foreground line-clamp-2">{ticket.description}</p>
 
         {ticket.photoUrl && (
@@ -98,7 +98,7 @@ export default function TicketCard({ ticket, onClick }) {
           <AIConfidenceBadge confidence={ticket.aiConfidence} isClean={ticket.aiConfidence <= 20} />
         )}
 
-        <div className="flex items-center gap-4 text-sm flex-wrap">
+        <div className="mt-auto flex items-center gap-4 text-sm flex-wrap pt-2">
           <span className="flex items-center gap-1 text-muted-foreground">
             <User className="h-3 w-3" />
             {ticket.submittedBy}

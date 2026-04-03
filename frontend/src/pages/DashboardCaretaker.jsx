@@ -31,7 +31,7 @@ export default function DashboardCaretaker() {
   const [tickets, setTickets] = useState({ open: [], inProcess: [], resolved_pending: [], resolved: [] });
   const [activeTab, setActiveTab] = useState("open");
   const [loading, setLoading] = useState(true);
-  const [slideIndex, setSlideIndex] = useState(0);
+
 
   // Staff management
   const [staffList, setStaffList] = useState([]);
@@ -56,7 +56,7 @@ export default function DashboardCaretaker() {
   const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "medium" });
 
-  useEffect(() => { setSlideIndex(0); }, [activeTab]);
+
 
   // ── Fetch tickets ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -541,72 +541,60 @@ export default function DashboardCaretaker() {
           {/* ── TICKETS VIEW ─────────────────────────────────────────────── */}
           {isTicketView && (
             <div className="max-w-6xl">
-              <div className="relative overflow-hidden">
-                <button onClick={() => setSlideIndex(prev => Math.max(prev - 1, 0))}
-                  className="absolute left-0 top-[45%] -translate-y-1/2 z-20 w-9 h-9 bg-white border border-[#D6E8DC] rounded-full flex items-center justify-center shadow hover:bg-[#E8F2EC] transition text-sm">
-                  ◀
-                </button>
-                <button onClick={() => setSlideIndex(prev => prev + 1)}
-                  className="absolute right-0 top-[45%] -translate-y-1/2 z-20 w-9 h-9 bg-white border border-[#D6E8DC] rounded-full flex items-center justify-center shadow hover:bg-[#E8F2EC] transition text-sm">
-                  ▶
-                </button>
-
-                <div className="flex transition-transform duration-500 ease-in-out mx-10"
-                  style={{ transform: `translateX(-${slideIndex * 50}%)` }}>
-                  {(tickets[activeTab] || []).length === 0 ? (
-                    <div className="w-full text-center py-16">
-                      <div className="w-16 h-16 rounded-2xl bg-[#E8F2EC] flex items-center justify-center mx-auto mb-3">
-                        <ClipboardList className="w-7 h-7 text-[#4A7C59]" />
-                      </div>
-                      <p className="text-[#7A9282] text-sm">No tickets found.</p>
-                    </div>
-                  ) : (
-                    (tickets[activeTab] || []).map(t => (
-                      <div key={t._id} className="w-1/2 px-3 shrink-0">
-                        <div className="bg-white rounded-2xl border border-[#D6E8DC] shadow-sm overflow-hidden">
-                          <div className="h-1 bg-gradient-to-r from-[#4A7C59] to-[#7DB88A]" />
-                          <div className="p-5">
-                            <TicketCard
-                              ticket={{
-                                id: t._id,
-                                title: t.title,
-                                roomNumber: t.roomNumber,
-                                floorSelected: t.floorSelected,
-                                locationSelected: t.locationSelected,
-                                photoUrl: t.photoUrl,
-                                floor: t.floorSelected || t.floor || "-",
-                                submittedAt: new Date(t.createdAt).toLocaleString(),
-                                status: t.status === "open" ? "pending" : t.status,
-                                description: t.description,
-                                aiConfidence: t.aiConfidence,
-                                submittedBy: t.studentEmail,
-                              }}
-                            />
-                            {t.status === "open" && (
-                              <button onClick={() => updateStatus(t._id, "in-progress")}
-                                className="mt-4 w-full py-2.5 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-sm font-semibold rounded-xl transition-all">
-                                Mark as In-Progress
-                              </button>
-                            )}
-                            {t.status === "in-progress" && (
-                              <button onClick={() => updateStatus(t._id, "resolved_pending")}
-                                className="mt-4 w-full py-2.5 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-sm font-semibold rounded-xl transition-all">
-                                Mark as Resolved (Pending)
-                              </button>
-                            )}
-                            {t.status === "resolved_pending" && (
-                              <button disabled
-                                className="mt-4 w-full py-2.5 bg-[#E8F2EC] text-[#7A9282] text-sm font-semibold rounded-xl cursor-not-allowed">
-                                Waiting for student confirmation
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
+              {(tickets[activeTab] || []).length === 0 ? (
+                <div className="w-full text-center py-16">
+                  <div className="w-16 h-16 rounded-2xl bg-[#E8F2EC] flex items-center justify-center mx-auto mb-3">
+                    <ClipboardList className="w-7 h-7 text-[#4A7C59]" />
+                  </div>
+                  <p className="text-[#7A9282] text-sm">No tickets found.</p>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {(tickets[activeTab] || []).map(t => (
+                    <div key={t._id} className="bg-white rounded-2xl border border-[#D6E8DC] shadow-sm overflow-hidden flex flex-col">
+                      <div className="h-1 bg-gradient-to-r from-[#4A7C59] to-[#7DB88A] shrink-0" />
+                      <div className="p-5 flex flex-col flex-1">
+                        <div className="flex-1 flex flex-col">
+                          <TicketCard
+                            ticket={{
+                              id: t._id,
+                              title: t.title,
+                              roomNumber: t.roomNumber,
+                              floorSelected: t.floorSelected,
+                              locationSelected: t.locationSelected,
+                              photoUrl: t.photoUrl,
+                              floor: t.floorSelected || t.floor || "-",
+                              submittedAt: new Date(t.createdAt).toLocaleString(),
+                              status: t.status === "open" ? "pending" : t.status,
+                              description: t.description,
+                              aiConfidence: t.aiConfidence,
+                              submittedBy: t.studentEmail,
+                            }}
+                          />
+                        </div>
+                        {t.status === "open" && (
+                          <button onClick={() => updateStatus(t._id, "in-progress")}
+                            className="mt-4 w-full py-2.5 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-sm font-semibold rounded-xl transition-all shrink-0">
+                            Mark as In-Progress
+                          </button>
+                        )}
+                        {t.status === "in-progress" && (
+                          <button onClick={() => updateStatus(t._id, "resolved_pending")}
+                            className="mt-4 w-full py-2.5 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-sm font-semibold rounded-xl transition-all shrink-0">
+                            Mark as Resolved (Pending)
+                          </button>
+                        )}
+                        {t.status === "resolved_pending" && (
+                          <button disabled
+                            className="mt-4 w-full py-2.5 bg-[#E8F2EC] text-[#7A9282] text-sm font-semibold rounded-xl cursor-not-allowed shrink-0">
+                            Waiting for student confirmation
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </main>
