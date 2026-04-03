@@ -10,7 +10,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState("caretaker");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSwirling, setIsSwirling] = useState(false);
 
@@ -77,9 +77,9 @@ export default function Login() {
           <h1 className="text-3xl font-extrabold text-center text-green-700 mb-6">
             CleanTrack
           </h1>
-          <p className="text-center text-sm text-gray-500 mb-4">
+          {/* <p className="text-center text-sm text-gray-500 mb-4">
             Hostel Portal Login — choose your role to continue
-          </p>
+          </p> */}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
@@ -100,18 +100,18 @@ export default function Login() {
               required
             />
 
-            <div className="flex gap-3 items-center">
-              <label className="flex-1">
-                <select
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 transition"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                >
-                  <option value="student">Student</option>
-                  <option value="caretaker">Caretaker</option>
-                </select>
-              </label>
-            </div>
+            {/* <div className="flex gap-3 items-center"> */}
+              {/* <label className="flex-1"> */}
+                {/* <select */}
+                  {/* className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 transition" */}
+                  {/* value={role} */}
+                  {/* onChange={(e) => setRole(e.target.value)} */}
+                {/* > */}
+                  {/* <option value="student">Student</option> */}
+                  {/* <option value="caretaker">Caretaker</option> */}
+                {/* </select> */}
+              {/* </label> */}
+            {/* </div> */}
 
             <button
               type="submit"
@@ -143,8 +143,8 @@ export default function Login() {
           <p className="text-sm text-center mt-4 text-gray-500">
             Don’t have an account?{" "}
             {/* Don’t have an account?{" "} */}
-            <a href="/signup/student" className="text-green-600 font-semibold">Student</a> |
-            <a href="/signup/caretaker" className="text-green-600 font-semibold ml-1">Caretaker</a> 
+            {/* <a href="/signup/student" className="text-green-600 font-semibold">Student</a> | */}
+            <a href="/signup/caretaker" className="text-green-600 font-semibold ml-1">Sign up here</a> 
             
           </p>
         </div>
