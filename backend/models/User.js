@@ -5,9 +5,9 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ["student", "caretaker"], required: true },
-  roomNumber: { type: String, required: function() { return this.role === "student"; } }, // 👈 new
+  roomNumber: { type: String, required: function() { return this.role === "student"; } },
+  hostelId: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel", default: null },
   isVerified: { type: Boolean, default: false },
-
   verificationCode: { type: String },
 });
 

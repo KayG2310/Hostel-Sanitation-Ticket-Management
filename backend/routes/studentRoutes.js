@@ -8,28 +8,42 @@ import Announcement from "../models/Announcement.js";
 
 const router = express.Router();
 
+/** Extract floor from room numbers like "219", "RW-201", "G04" etc.
+ *  Strips non-digit chars, then reads the first digit as the floor. */
+const getFloor = (roomNumber) => {
+  const digits = String(roomNumber).replace(/[^0-9]/g, "");
+  const floor = digits ? parseInt(digits[0], 10) : 1;
+  return floor || 1; // guard against 0
+};
+
 // GET /api/student/dashboard-student
 router.get("/dashboard-student", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password -verificationCode");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const floor = user.roomNumber ? parseInt(user.roomNumber[0]) : 1;
+    const floor = getFloor(user.roomNumber);
 
     // Fetch room and populate Staff refs so student sees actual names
-    let room = await Room.findOne({ roomNumber: user.roomNumber })
-      .populate("janitors.roomCleaner", "name")
-      .populate("janitors.corridorCleaner", "name")
-      .populate("janitors.washroomCleaner", "name");
+    let room = await Room.findOne({ roomNumber: user.roomNumber, hostelId: user.hostelId })
+      .populate("janitors.roomCleaner", "name phone")
+      .populate("janitors.corridorCleaner", "name phone")
+      .populate("janitors.washroomCleaner", "name phone");
 
-    const caretakerUser = await User.findOne({ role: "caretaker", isVerified: true });
+    // Step 4: find caretaker scoped to this student's hostel
+    const caretakerUser = await User.findOne({
+      role: "caretaker",
+      isVerified: true,
+      hostelId: user.hostelId,
+    });
     const caretakerName = caretakerUser ? caretakerUser.name : "Unassigned";
 
     if (!room) {
-      // Create a bare room — no janitors assigned yet
+      // Create a bare room — no janitors assigned yet, stamp hostelId
       const newRoom = new Room({
         roomNumber: user.roomNumber || "N/A",
         floor,
+        hostelId: user.hostelId || null,  // Step 4: stamp hostel on room
         lastCleaned: null,
         caretaker: caretakerName !== "Unassigned" ? caretakerName : null,
         janitors: { roomCleaner: null, corridorCleaner: null, washroomCleaner: null },
@@ -48,11 +62,20 @@ router.get("/dashboard-student", verifyToken, async (req, res) => {
       { id: 2, message: "Caretaker meeting on 3rd Nov, 5 PM" },
     ];
 
-    // Build janitor name map for the student dashboard
+    // Build janitor info map for the student dashboard (name + phone)
     const janitors = {
-      roomCleaner:     room.janitors?.roomCleaner?.name     || "Unassigned",
-      corridorCleaner: room.janitors?.corridorCleaner?.name || "Unassigned",
-      washroomCleaner: room.janitors?.washroomCleaner?.name || "Unassigned",
+      roomCleaner: {
+        name:  room.janitors?.roomCleaner?.name  || "Unassigned",
+        phone: room.janitors?.roomCleaner?.phone || null,
+      },
+      corridorCleaner: {
+        name:  room.janitors?.corridorCleaner?.name  || "Unassigned",
+        phone: room.janitors?.corridorCleaner?.phone || null,
+      },
+      washroomCleaner: {
+        name:  room.janitors?.washroomCleaner?.name  || "Unassigned",
+        phone: room.janitors?.washroomCleaner?.phone || null,
+      },
     };
 
     res.json({
@@ -85,12 +108,13 @@ router.post("/mark-clean", verifyToken, async (req, res) => {
     if (!user || user.role !== "student")
       return res.status(403).json({ message: "Only students can mark clean." });
 
-    let room = await Room.findOne({ roomNumber: user.roomNumber });
+    let room = await Room.findOne({ roomNumber: user.roomNumber, hostelId: user.hostelId });
     if (!room) {
-      const floor = parseInt(user.roomNumber[0]) || 1;
+      const floor = getFloor(user.roomNumber);
       room = new Room({
         roomNumber: user.roomNumber,
         floor,
+        hostelId: user.hostelId || null,  // Step 4: stamp hostelId
         caretaker: null,
         janitors: { roomCleaner: null, corridorCleaner: null, washroomCleaner: null },
       });
@@ -114,7 +138,7 @@ router.post("/rate", verifyToken, async (req, res) => {
     if (!user || user.role !== "student")
       return res.status(403).json({ message: "Only students can rate janitors." });
 
-    const floor = parseInt(user.roomNumber[0]) || 1;
+    const floor = getFloor(user.roomNumber);
 
     // Fetch room to get current Staff assignments
     const room = await Room.findOne({ roomNumber: user.roomNumber });
@@ -147,7 +171,7 @@ router.get("/staff-ratings", verifyToken, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const floor = parseInt(user.roomNumber[0]) || 1;
+    const floor = getFloor(user.roomNumber);
 
     const avgRatings = await Rating.aggregate([
       { $match: { floor } },
@@ -175,9 +199,13 @@ router.get("/announcements", verifyToken, async (req, res) => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Step 6: scope announcements to the student's hostel
+    const hostelFilter = user.hostelId ? { hostelId: user.hostelId } : {};
+
     const announcements = await Announcement.find({
       createdAt: { $gte: sevenDaysAgo },
       $or: [{ targetAudience: "all" }, { targetAudience: "students" }],
+      ...hostelFilter,
     })
       .populate("postedBy", "name email")
       .limit(20);
@@ -207,6 +235,26 @@ router.put("/confirm-resolved/:id", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Error confirming resolution:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// DELETE /api/student/delete-account
+router.delete("/delete-account", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Delete all tickets raised by this student
+    const ticketResult = await Ticket.deleteMany({ studentEmail: user.email });
+
+    // Delete the user
+    await User.findByIdAndDelete(req.user.id);
+
+    console.log(`🗑️ Deleted account for ${user.email} (${ticketResult.deletedCount} tickets removed)`);
+    res.json({ message: "Account and all associated tickets deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting student account:", err);
+    res.status(500).json({ message: "Server error while deleting account" });
   }
 });
 

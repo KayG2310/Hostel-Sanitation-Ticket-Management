@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
 const roomSchema = new mongoose.Schema({
-  roomNumber: { type: String, required: true, unique: true },
+  roomNumber: { type: String, required: true },
+  hostelId: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel", default: null },
   lastCleaned: { type: Date, default: null },
   caretaker: { type: String, default: null },
   floor: { type: Number, required: true },

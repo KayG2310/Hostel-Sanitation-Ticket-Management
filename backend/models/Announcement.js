@@ -10,6 +10,7 @@ const announcementSchema = new mongoose.Schema({
     required: true 
   },
   postedByName: { type: String, required: true },
+  hostelId: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel", default: null },
   createdAt: { type: Date, default: Date.now },
   priority: { 
     type: String, 

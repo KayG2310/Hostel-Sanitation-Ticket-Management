@@ -40,6 +40,7 @@ router.post(
       const ticketData = {
         studentEmail,
         roomNumber,
+        hostelId: user?.hostelId || null,   // ← Step 2: stamp hostel on ticket
         floor,
         title: trimmedTitle,
         description: trimmedDescription,

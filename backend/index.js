@@ -7,10 +7,12 @@ import { fileURLToPath } from "url";
 
 import connectDB from "./config/db.js";
 import { migrateStaffFromRooms } from "./utils/migrateStaff.js";
+import { seedHostels } from "./utils/seedHostels.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import authRoutes from "./routes/auth.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import caretakerRoutes from "./routes/caretaker.js";
+import hostelRoutes from "./routes/hostels.js";
 
 
 
@@ -34,6 +36,7 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/caretaker", caretakerRoutes);
+app.use("/api/hostels", hostelRoutes);
 
 // Base route
 app.get("/", (req, res) => {
@@ -49,6 +52,11 @@ connectDB().then(async () => {
     await migrateStaffFromRooms();
   } catch (err) {
     console.error("⚠️  Staff migration error (non-fatal):", err.message);
+  }
+  try {
+    await seedHostels();
+  } catch (err) {
+    console.error("⚠️  Hostel seed error (non-fatal):", err.message);
   }
 });
 

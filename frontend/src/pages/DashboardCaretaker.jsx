@@ -32,6 +32,9 @@ export default function DashboardCaretaker() {
   const [activeTab, setActiveTab] = useState("open");
   const [loading, setLoading] = useState(true);
 
+  // Step 7: store authenticated caretaker info
+  const [caretakerInfo, setCaretakerInfo] = useState({ name: "Caretaker", hostelName: "" });
+
 
   // Staff management
   const [staffList, setStaffList] = useState([]);
@@ -57,6 +60,24 @@ export default function DashboardCaretaker() {
   const [announcementForm, setAnnouncementForm] = useState({ title: "", content: "", priority: "medium" });
 
 
+
+  // ── Fetch user info (name + hostel) ──────────────────────────────────────────
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await axios.get(`${API}/api/auth/me`, { headers: authHeader() });
+        const u = res.data;
+        setCaretakerInfo({
+          name: u.name || "Caretaker",
+          hostelName: u.hostelId?.name || "",
+          hostelCode: u.hostelId?.code || "",
+        });
+      } catch (err) {
+        console.error("Failed to fetch caretaker info:", err);
+      }
+    };
+    fetchMe();
+  }, []);
 
   // ── Fetch tickets ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -166,6 +187,10 @@ export default function DashboardCaretaker() {
   const handleAddStaff = async (e) => {
     e.preventDefault();
     if (!newStaffName.trim()) return;
+    if (!newStaffPhone.trim()) {
+      alert("Phone number is required to add a staff member.");
+      return;
+    }
     setAddingStaff(true);
     try {
       await axios.post(`${API}/api/caretaker/staff`, { name: newStaffName.trim(), phone: newStaffPhone.trim() }, { headers: authHeader() });
@@ -176,6 +201,15 @@ export default function DashboardCaretaker() {
       alert(err.response?.data?.message || "Failed to add staff member");
     } finally {
       setAddingStaff(false);
+    }
+  };
+
+  const handleReinstateStaff = async (staffId, name) => {
+    try {
+      await axios.put(`${API}/api/caretaker/staff/${staffId}/reinstate`, {}, { headers: authHeader() });
+      await fetchStaff();
+    } catch (err) {
+      alert("Failed to reinstate staff member");
     }
   };
 
@@ -255,7 +289,9 @@ export default function DashboardCaretaker() {
             </svg>
           </div>
           <p className="text-[15px] font-semibold text-[#1A2E1F]">CleanTrack</p>
-          <p className="text-[11px] text-[#7A9282] mt-0.5">Caretaker Dashboard</p>
+          <p className="text-[11px] text-[#7A9282] mt-0.5">
+            {caretakerInfo.hostelName ? caretakerInfo.hostelName : "Caretaker Dashboard"}
+          </p>
         </div>
 
         {/* Nav */}
@@ -298,10 +334,14 @@ export default function DashboardCaretaker() {
         {/* Footer */}
         <div className="px-4 py-4 border-t border-[#D6E8DC]">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[#4A7C59] flex items-center justify-center text-white text-[11px] font-bold shrink-0">CT</div>
+            <div className="w-8 h-8 rounded-full bg-[#4A7C59] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+              {caretakerInfo.name?.[0]?.toUpperCase() || "C"}
+            </div>
             <div>
-              <p className="text-[12px] font-semibold text-[#1A2E1F]">Caretaker</p>
-              <p className="text-[11px] text-[#7A9282]">Floor Admin</p>
+              <p className="text-[12px] font-semibold text-[#1A2E1F]">{caretakerInfo.name}</p>
+              <p className="text-[11px] text-[#7A9282]">
+                {caretakerInfo.hostelName || "Caretaker"}
+              </p>
             </div>
           </div>
           <button onClick={() => { localStorage.clear(); window.location.href = "/"; }}
@@ -319,9 +359,13 @@ export default function DashboardCaretaker() {
         <header className="bg-white border-b border-[#D6E8DC] px-8 py-4 flex items-center justify-between sticky top-0 z-30">
           <div>
             <h1 className="text-xl text-[#1A2E1F]" style={{ fontFamily: "'DM Serif Display', serif", fontWeight: 400 }}>
-              Hello, Caretaker
+              Hello, {caretakerInfo.name}
             </h1>
-            <p className="text-[12px] text-[#7A9282] mt-0.5">Manage sanitation tickets for your assigned areas</p>
+            <p className="text-[12px] text-[#7A9282] mt-0.5">
+              {caretakerInfo.hostelName
+                ? `Managing ${caretakerInfo.hostelName} — sanitation tickets and staff`
+                : "Manage sanitation tickets for your assigned areas"}
+            </p>
           </div>
           <button onClick={() => setShowAnnouncementDialog(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-[13px] font-medium rounded-xl transition-all">
@@ -347,9 +391,9 @@ export default function DashboardCaretaker() {
                     <input type="text" value={newStaffName} required
                       onChange={e => setNewStaffName(e.target.value)} placeholder="Full name *"
                       className="flex-1 rounded-xl border border-[#D6E8DC] px-3 py-2.5 text-sm focus:border-[#4A7C59] focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 bg-[#F4F7F4]" />
-                    <input type="text" value={newStaffPhone}
-                      onChange={e => setNewStaffPhone(e.target.value)} placeholder="Phone (optional)"
-                      className="sm:max-w-[160px] rounded-xl border border-[#D6E8DC] px-3 py-2.5 text-sm focus:border-[#4A7C59] focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 bg-[#F4F7F4]" />
+                    <input type="tel" value={newStaffPhone} required
+                      onChange={e => setNewStaffPhone(e.target.value)} placeholder="Phone number *"
+                      className="sm:max-w-[180px] rounded-xl border border-[#D6E8DC] px-3 py-2.5 text-sm focus:border-[#4A7C59] focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 bg-[#F4F7F4]" />
                     <button type="submit" disabled={addingStaff}
                       className="flex items-center gap-2 px-4 py-2.5 bg-[#4A7C59] hover:bg-[#2D5A3D] text-white text-sm font-semibold rounded-xl shadow-sm disabled:opacity-60 transition-all">
                       <UserPlus className="w-4 h-4" />
@@ -366,20 +410,27 @@ export default function DashboardCaretaker() {
                       {staffList.map(s => (
                         <div key={s._id}
                           className={`flex items-center justify-between rounded-xl border px-4 py-3 transition-all
-                            ${s.isActive ? "border-[#D6E8DC] bg-[#F4F7F4]" : "border-red-100 bg-red-50/40 opacity-60"}`}>
+                            ${s.isActive ? "border-[#D6E8DC] bg-[#F4F7F4]" : "border-red-100 bg-red-50/40 opacity-70"}`}>
                           <div>
                             <p className={`text-sm font-semibold ${s.isActive ? "text-[#1A2E1F]" : "text-gray-400 line-through"}`}>
                               {s.name}
-                              {!s.isActive && <span className="ml-2 text-xs font-normal text-red-400">(removed)</span>}
+                              {!s.isActive && <span className="ml-2 text-xs font-normal text-red-400 no-underline" style={{ textDecoration: "none" }}>(removed)</span>}
                             </p>
                             {s.phone && <p className="text-xs text-[#7A9282] mt-0.5">{s.phone}</p>}
                           </div>
-                          {s.isActive && (
-                            <button onClick={() => handleDeleteStaff(s._id, s.name)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" /> Remove
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {s.isActive ? (
+                              <button onClick={() => handleDeleteStaff(s._id, s.name)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-all">
+                                <Trash2 className="w-3.5 h-3.5" /> Remove
+                              </button>
+                            ) : (
+                              <button onClick={() => handleReinstateStaff(s._id, s.name)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#2D5A3D] hover:bg-[#E8F2EC] rounded-lg border border-[#B8D9C4] transition-all">
+                                ↩ Reinstate
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

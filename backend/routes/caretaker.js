@@ -16,7 +16,10 @@ router.get("/tickets", verifyToken, async (req, res) => {
   try {
     const caretaker = await User.findById(req.user.id);
     if (!caretaker) return res.status(404).json({ message: "Caretaker not found" });
-    const tickets = await Ticket.find({}).sort({ createdAt: -1 });
+
+    // Step 3: only return tickets that belong to this caretaker's hostel
+    const filter = caretaker.hostelId ? { hostelId: caretaker.hostelId } : {};
+    const tickets = await Ticket.find(filter).sort({ createdAt: -1 });
     res.json({ tickets });
   } catch (err) {
     console.error("Error loading caretaker tickets:", err);
@@ -61,10 +64,13 @@ router.put("/mark-resolved/:id", verifyToken, async (req, res) => {
 
 // ── Staff CRUD ────────────────────────────────────────────────────────────────
 
-// GET /api/caretaker/staff — list all staff (active + inactive for display)
+// GET /api/caretaker/staff — list staff for this caretaker's hostel
 router.get("/staff", verifyToken, async (req, res) => {
   try {
-    const staff = await Staff.find({}).sort({ name: 1 });
+    const caretaker = await User.findById(req.user.id);
+    // Step 5: filter by hostelId so each caretaker only sees their own staff
+    const filter = caretaker?.hostelId ? { hostelId: caretaker.hostelId } : {};
+    const staff = await Staff.find(filter).sort({ name: 1 });
     res.json({ staff });
   } catch (err) {
     console.error("Error fetching staff:", err);
@@ -72,25 +78,53 @@ router.get("/staff", verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/caretaker/staff — add a new staff member
+// POST /api/caretaker/staff — add a new staff member (scoped to this hostel)
 router.post("/staff", verifyToken, async (req, res) => {
   try {
     const { name, phone } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ message: "Name is required" });
+    if (!phone || !phone.trim()) return res.status(400).json({ message: "Phone number is required" });
 
-    // Prevent duplicate active staff with the same name
-    const existing = await Staff.findOne({ name: name.trim(), isActive: true });
-    if (existing) return res.status(409).json({ message: "A staff member with this name already exists" });
+    const caretaker = await User.findById(req.user.id);
+    const hostelId = caretaker?.hostelId || null;
+
+    // Prevent duplicate active staff within the same hostel (by name OR phone)
+    const existing = await Staff.findOne({
+      isActive: true,
+      hostelId,
+      $or: [{ name: name.trim() }, { phone: phone.trim() }],
+    });
+    if (existing) {
+      const conflict = existing.name === name.trim() ? "name" : "phone number";
+      return res.status(409).json({ message: `A staff member with this ${conflict} already exists` });
+    }
 
     const staff = await Staff.create({
       name: name.trim(),
-      phone: phone?.trim() || null,
+      phone: phone.trim(),
       addedBy: req.user.id,
+      hostelId,
       isActive: true,
     });
     res.status(201).json({ message: "Staff member added", staff });
   } catch (err) {
     console.error("Error adding staff:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// PUT /api/caretaker/staff/:id/reinstate — reactivate a previously removed staff member
+router.put("/staff/:id/reinstate", verifyToken, async (req, res) => {
+  try {
+    const staff = await Staff.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    );
+    if (!staff) return res.status(404).json({ message: "Staff member not found" });
+    res.json({ message: `${staff.name} has been reinstated`, staff });
+  } catch (err) {
+    console.error("Error reinstating staff:", err);
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -133,9 +167,16 @@ router.put("/update-janitors/:floor", verifyToken, async (req, res) => {
   try {
     const { floor } = req.params;
     const { roomCleaner, corridorCleaner, washroomCleaner } = req.body;
+    const caretaker = await User.findById(req.user.id);
+    const hostelId = caretaker?.hostelId || null;
+
+    // Step 5: scope floor updates to rooms in this hostel only
+    const roomFilter = hostelId
+      ? { floor: Number(floor), hostelId }
+      : { floor: Number(floor) };
 
     const result = await Room.updateMany(
-      { floor: Number(floor) },
+      roomFilter,
       {
         $set: {
           "janitors.roomCleaner":     roomCleaner     || null,
@@ -155,7 +196,15 @@ router.put("/update-janitors/:floor", verifyToken, async (req, res) => {
 // GET /api/caretaker/janitors/:floor — returns { roomCleaner: { _id, name }, ... }
 router.get("/janitors/:floor", verifyToken, async (req, res) => {
   try {
-    const room = await Room.findOne({ floor: Number(req.params.floor) })
+    const caretaker = await User.findById(req.user.id);
+    const hostelId = caretaker?.hostelId || null;
+
+    // Step 5: scope room lookup to this hostel's floor
+    const roomFilter = hostelId
+      ? { floor: Number(req.params.floor), hostelId }
+      : { floor: Number(req.params.floor) };
+
+    const room = await Room.findOne(roomFilter)
       .populate("janitors.roomCleaner", "name phone isActive")
       .populate("janitors.corridorCleaner", "name phone isActive")
       .populate("janitors.washroomCleaner", "name phone isActive");
@@ -251,12 +300,24 @@ router.post("/announcements", verifyToken, async (req, res) => {
     if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
 
     const announcement = new Announcement({
-      title, content, postedBy: caretaker._id, postedByName: caretaker.name, priority, targetAudience,
+      title,
+      content,
+      postedBy: caretaker._id,
+      postedByName: caretaker.name,
+      hostelId: caretaker.hostelId || null,  // Step 6: stamp hostel on announcement
+      priority,
+      targetAudience,
     });
     await announcement.save();
 
     try {
-      const students = await User.find({ role: "student", isVerified: true }).select("email name");
+      // Step 6: only email students from the same hostel
+      const studentFilter = {
+        role: "student",
+        isVerified: true,
+        ...(caretaker.hostelId ? { hostelId: caretaker.hostelId } : {}),
+      };
+      const students = await User.find(studentFilter).select("email name");
       const studentEmails = students.map((s) => s.email).filter(Boolean);
       if (studentEmails.length > 0) {
         const emailSubject = `[${priority.toUpperCase()}] ${title}`;
@@ -268,7 +329,7 @@ router.post("/announcements", verifyToken, async (req, res) => {
             )
           )
         );
-        console.log(`✅ Sent announcement emails to ${studentEmails.length} students`);
+        console.log(`✅ Sent announcement emails to ${studentEmails.length} students (hostel-scoped)`);
       }
     } catch (emailErr) {
       console.error("Error sending announcement emails:", emailErr);
@@ -283,7 +344,10 @@ router.post("/announcements", verifyToken, async (req, res) => {
 
 router.get("/announcements", verifyToken, async (req, res) => {
   try {
-    const announcements = await Announcement.find({})
+    const caretaker = await User.findById(req.user.id);
+    // Step 6: only show announcements posted by this hostel's caretaker(s)
+    const filter = caretaker?.hostelId ? { hostelId: caretaker.hostelId } : {};
+    const announcements = await Announcement.find(filter)
       .sort({ createdAt: -1 })
       .populate("postedBy", "name email")
       .limit(50);

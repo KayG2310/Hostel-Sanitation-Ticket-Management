@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import BubblesBackground from "../components/BubblesBackground";
 
@@ -7,11 +7,19 @@ export default function SignupCaretaker() {
     name: "",
     email: "",
     password: "",
+    hostelId: "",
   });
-
-  const [step, setStep] = useState(1); 
+  const [hostels, setHostels] = useState([]);
+  const [step, setStep] = useState(1);
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    axios
+      .get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/hostels`)
+      .then((res) => setHostels(res.data.hostels || []))
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -19,6 +27,10 @@ export default function SignupCaretaker() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (!formData.hostelId) {
+      alert("Please select the hostel you are caretaker for.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -29,7 +41,6 @@ export default function SignupCaretaker() {
 
       alert(res.data.message);
       setStep(2);
-
     } catch (err) {
       alert("❌ Signup failed: " + (err.response?.data?.message || err.message));
     } finally {
@@ -44,15 +55,11 @@ export default function SignupCaretaker() {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/auth/verify/caretaker`,
-        {
-          email: formData.email,
-          code,
-        }
+        { email: formData.email, code }
       );
 
       alert(res.data.message);
       window.location.href = "/";
-
     } catch (err) {
       alert("❌ Verification failed: " + (err.response?.data?.message || err.message));
     } finally {
@@ -98,6 +105,22 @@ export default function SignupCaretaker() {
                   required
                   className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-100"
                 />
+
+                {/* Hostel selector */}
+                <select
+                  name="hostelId"
+                  value={formData.hostelId}
+                  onChange={handleChange}
+                  required
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-100 bg-white text-gray-700"
+                >
+                  <option value="">— Select your hostel —</option>
+                  {hostels.map((h) => (
+                    <option key={h._id} value={h._id}>
+                      {h.name} ({h.code})
+                    </option>
+                  ))}
+                </select>
 
                 <input
                   type="password"

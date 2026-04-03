@@ -96,19 +96,29 @@ export default function DashboardStudent() {
     }
   };
 
-  const handleTicketCreate = async (payload) => {
+  const handleDeleteAccount = async () => {
+    const first = window.confirm("Delete your account? This will permanently remove your account and all your tickets.");
+    if (!first) return;
+    const second = window.confirm("Are you absolutely sure? This cannot be undone.");
+    if (!second) return;
     try {
-      const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/tickets/create`, {
-        studentId: userData.id,
-        studentEmail: userData.email,
-        roomNumber: payload.roomNumber || userData.roomNumber,
-        title: payload.title,
-        description: payload.description,
-        photoUrl: req.body.photo || null,
-      }, {
+      await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/student/delete-account`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+      localStorage.clear();
+      window.location.href = "/";
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete account.");
+    }
+  };
 
+  const handleTicketCreate = async (payload) => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASE_URL}/api/tickets/create`,
+        payload,  // TicketSubmissionForm already builds the FormData with the photo
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
       const created = res.data.ticket || res.data;
       setTickets(prev => [created, ...prev]);
       setShowSubmitForm(false);
@@ -151,21 +161,33 @@ export default function DashboardStudent() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.href = "/";
-              }}
-              className="group relative px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-md transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 overflow-hidden"
-            >
-              {/* Button shine effect */}
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <svg className="w-3.5 h-3.5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="hidden sm:inline relative z-10">Logout</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  window.location.href = "/";
+                }}
+                className="group relative px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-md transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 overflow-hidden"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                <svg className="w-3.5 h-3.5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="hidden sm:inline relative z-10">Logout</span>
+              </button>
+
+              <button
+                onClick={handleDeleteAccount}
+                className="px-3 py-2 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-all duration-200 flex items-center gap-1"
+                title="Delete your account permanently"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden sm:inline">Delete account</span>
+              </button>
+            </div>
           </div>
         </div>
 

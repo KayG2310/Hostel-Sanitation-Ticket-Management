@@ -5,6 +5,7 @@ const ticketSchema = new mongoose.Schema({
   // studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   studentEmail: { type: String, required: true },
   roomNumber: { type: String, required: true },
+  hostelId: { type: mongoose.Schema.Types.ObjectId, ref: "Hostel", default: null },
   title: { type: String, required: true },
   description: { type: String, required: true },
   status: {
